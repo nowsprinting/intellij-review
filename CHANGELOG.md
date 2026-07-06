@@ -14,9 +14,3 @@
     - Find Usages for block IDs, heading labels, and chapter files
     - Rename refactoring for block IDs, heading labels, and chapter file names (Shift+F6)
     - Structure View with nested heading hierarchy and a dedicated icon for columns
-
-### Changed
-
-- Set the plugin vendor to Koji Hasegawa (`https://github.com/nowsprinting`)
-- Source the plugin description from `README.md` and change notes from `CHANGELOG.md` instead of a hardcoded `plugin.xml` description
-- Wire up `since-build`, plugin signing, and Marketplace publishing configuration driven by `gradle.properties`
