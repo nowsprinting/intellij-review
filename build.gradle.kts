@@ -1,3 +1,4 @@
+import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.grammarkit.tasks.GenerateLexerTask
 import org.jetbrains.grammarkit.tasks.GenerateParserTask
@@ -9,13 +10,16 @@ plugins {
     id("org.jetbrains.grammarkit")
 }
 
+group = providers.gradleProperty("pluginGroup").get()
+version = providers.gradleProperty("pluginVersion").get()
+
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
     testImplementation(libs.junit)
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
-        intellijIdea("2025.3.5")
+        intellijIdea(providers.gradleProperty("platformVersion"))
         testFramework(TestFrameworkType.Platform)
 
         // Add plugin dependencies for compilation here, for example:
@@ -27,6 +31,66 @@ dependencies {
     // 参考: https://youtrack.jetbrains.com/issue/IJPL-217565
     compileOnly("org.jetbrains.intellij.deps.fastutil:intellij-deps-fastutil:8.5.18-jb1")
     compileOnly("org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm:0.5.0")
+}
+
+// IntelliJ Platform Gradle Plugin Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
+intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = providers.gradleProperty("pluginSinceBuild")
+        }
+
+        // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
+        description = providers.fileContents(layout.projectDirectory.file("README.md")).asText.map {
+            val start = "<!-- Plugin description -->"
+            val end = "<!-- Plugin description end -->"
+            with(it.lines()) {
+                if (!containsAll(listOf(start, end))) {
+                    throw GradleException("Plugin description section not found in README.md:\n$start ... $end")
+                }
+                subList(indexOf(start) + 1, indexOf(end)).joinToString("\n").let(::markdownToHTML)
+            }
+        }
+
+        changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
+            with(changelog) {
+                renderItem(
+                    (getOrNull(pluginVersion) ?: getUnreleased())
+                        .withHeader(false)
+                        .withEmptySections(false),
+                    org.jetbrains.changelog.Changelog.OutputType.HTML,
+                )
+            }
+        }
+    }
+
+    signing {
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
+    }
+
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+        channels = providers.gradleProperty("pluginVersion").map { pluginVersion ->
+            val channel = pluginVersion.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }
+            val platformVersion = providers.gradleProperty("platformVersion").get()
+            if (channel == "default" && Regex("(?i)(EAP|SNAPSHOT|-RC\\d*$)").containsMatchIn(platformVersion)) {
+                throw GradleException(
+                    "platformVersion ('$platformVersion') looks like an EAP/pre-release build, but " +
+                        "pluginVersion ('$pluginVersion') has no channel suffix, which would publish to the " +
+                        "default (stable) channel. Tag the release with a channel suffix, e.g. 'v2.0.0-eap.1'."
+                )
+            }
+            listOf(channel)
+        }
+    }
+}
+
+changelog {
+    version = providers.gradleProperty("pluginVersion")
+    groups.empty()
+    repositoryUrl = providers.gradleProperty("pluginRepositoryUrl")
 }
 
 val reviewPsiRoot = "com/nowsprinting/intellijreview/psi"
@@ -67,5 +131,11 @@ tasks {
     }
     compileJava {
         dependsOn(generateReviewLexer, generateReviewParser)
+    }
+    wrapper {
+        gradleVersion = providers.gradleProperty("gradleVersion").get()
+    }
+    publishPlugin {
+        dependsOn(patchChangelog)
     }
 }

@@ -8,13 +8,7 @@
     <name>Re:VIEW</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.yourcompany.com">YourCompany</vendor>
-
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
-    <description><![CDATA[
-        Native language support for <a href="https://github.com/kmuto/review">Re:VIEW</a> (.re) files.
-        ]]></description>
+    <vendor url="https://github.com/nowsprinting">Koji Hasegawa</vendor>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
