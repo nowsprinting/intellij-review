@@ -1,0 +1,12 @@
+Re:VIEW File
+  ReviewParagraphImpl(PARAGRAPH)
+    PsiElement(ReviewTokenType.TEXT)('Hello ')
+    ReviewInlineCommandImpl(INLINE_COMMAND)
+      PsiElement(ReviewTokenType.INLINE_START)('@<')
+      PsiElement(ReviewTokenType.INLINE_NAME)('b')
+      PsiElement(ReviewTokenType.INLINE_TAG_CLOSE)('>')
+      PsiElement(ReviewTokenType.INLINE_LBRACE)('{')
+      PsiElement(ReviewTokenType.INLINE_CONTENT)('world')
+      PsiElement(ReviewTokenType.INLINE_RBRACE)('}')
+    PsiElement(ReviewTokenType.TEXT)('!')
+    PsiElement(ReviewTokenType.EOL)('\n')

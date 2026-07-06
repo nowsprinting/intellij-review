@@ -239,6 +239,9 @@ nunit-*.xml
 src/main/generated/
 src/dotnet/*/Model/
 
+# Grammar-Kit / JFlex generated lexer and parser sources
+src/main/gen/
+
 # .NET build output
 src/dotnet/*/bin/
 src/dotnet/*/obj/

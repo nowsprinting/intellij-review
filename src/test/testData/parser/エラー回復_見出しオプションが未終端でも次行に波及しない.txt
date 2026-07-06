@@ -1,0 +1,11 @@
+Re:VIEW File
+  ReviewHeadingImpl(HEADING)
+    PsiElement(ReviewTokenType.HEADING_MARKER)('==')
+    PsiElement(ReviewTokenType.LBRACKET)('[')
+    PsiElement(ReviewTokenType.HEADING_OPTION)('bad')
+    PsiErrorElement:ReviewTokenType.RBRACKET expected
+      <empty list>
+    PsiElement(ReviewTokenType.EOL)('\n')
+  ReviewParagraphImpl(PARAGRAPH)
+    PsiElement(ReviewTokenType.TEXT)('Next line.')
+    PsiElement(ReviewTokenType.EOL)('\n')

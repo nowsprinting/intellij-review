@@ -5,7 +5,7 @@
 
     <!-- Public plugin name should be written in Title Case.
      Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
-    <name>Intellij-review</name>
+    <name>Re:VIEW</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor url="https://www.yourcompany.com">YourCompany</vendor>
@@ -13,21 +13,39 @@
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Enter short description for your plugin here.<br>
-        <em>most HTML tags may be used</em>
+        Native language support for <a href="https://github.com/kmuto/review">Re:VIEW</a> (.re) files.
         ]]></description>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
 
-    <resource-bundle>messages.MyMessageBundle</resource-bundle>
+    <resource-bundle>messages.ReviewBundle</resource-bundle>
 
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="MyToolWindow" factoryClass="com.nowsprinting.MyToolWindowFactory"
-                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
+        <fileType name="Re:VIEW" implementationClass="com.nowsprinting.intellijreview.lang.ReviewFileType"
+                   fieldName="INSTANCE" language="ReVIEW" extensions="re"/>
+        <lang.parserDefinition language="ReVIEW"
+                               implementationClass="com.nowsprinting.intellijreview.parser.ReviewParserDefinition"/>
+        <lang.syntaxHighlighterFactory language="ReVIEW"
+                                       implementationClass="com.nowsprinting.intellijreview.highlighter.ReviewSyntaxHighlighterFactory"/>
+        <colorSettingsPage implementation="com.nowsprinting.intellijreview.highlighter.ReviewColorSettingsPage"/>
+        <lang.commenter language="ReVIEW"
+                         implementationClass="com.nowsprinting.intellijreview.highlighter.ReviewCommenter"/>
+        <completion.contributor language="ReVIEW"
+                                 implementationClass="com.nowsprinting.intellijreview.completion.ReviewCompletionContributor"/>
+        <lang.elementManipulator forClass="com.nowsprinting.intellijreview.psi.impl.ReviewBlockCommandMixin"
+                                  implementationClass="com.nowsprinting.intellijreview.rename.ReviewBlockArgManipulator"/>
+        <lang.elementManipulator forClass="com.nowsprinting.intellijreview.psi.impl.ReviewInlineCommandMixin"
+                                  implementationClass="com.nowsprinting.intellijreview.rename.ReviewInlineCommandManipulator"/>
+        <lang.findUsagesProvider language="ReVIEW"
+                                  implementationClass="com.nowsprinting.intellijreview.usages.ReviewFindUsagesProvider"/>
+        <lang.refactoringSupport language="ReVIEW"
+                                  implementationClass="com.nowsprinting.intellijreview.rename.ReviewRefactoringSupportProvider"/>
+        <lang.psiStructureViewFactory language="ReVIEW"
+                                       implementationClass="com.nowsprinting.intellijreview.structure.ReviewStructureViewFactory"/>
     </extensions>
 
 </idea-plugin>

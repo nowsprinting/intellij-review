@@ -1,0 +1,96 @@
+{
+  parserClass="com.nowsprinting.intellijreview.parser.ReviewParser"
+
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="Review"
+  psiImplClassSuffix="Impl"
+  psiPackage="com.nowsprinting.intellijreview.psi"
+  psiImplPackage="com.nowsprinting.intellijreview.psi.impl"
+
+  elementTypeHolderClass="com.nowsprinting.intellijreview.psi.ReviewTypes"
+  elementTypeClass="com.nowsprinting.intellijreview.psi.ReviewElementType"
+  tokenTypeClass="com.nowsprinting.intellijreview.psi.ReviewTokenType"
+
+  // トークン名がPsiElementの標準メソッド(getText()等)と衝突するため自動アクセサ生成を無効化。
+  // アクセサはPSI mixinで手動実装する(Step 3)。
+  generateTokenAccessors=false
+
+  tokens=[
+    HEADING_MARKER='regexp:=+'
+    HEADING_OPTION='regexp:[^\n\[\]]+'
+    HEADING_LABEL_OPEN='regexp:\{'
+    HEADING_LABEL_ID='regexp:[^\n}]+'
+    HEADING_LABEL_CLOSE='regexp:\}'
+    BLOCK_COMMAND_NAME='regexp://[a-z0-9]+'
+    LBRACKET='regexp:\['
+    RBRACKET='regexp:\]'
+    BLOCK_ARG_TEXT='regexp:[^\n\]]+'
+    // Grammar-Kitは単純な1文字リテラル正規表現(\{等)が同一の複数トークンを
+    // 同一視して片方を捨てるため、意図的に正規表現の形を変えて区別している
+    // (実際の字句解析はReviewLexer.flexが担うため、ここは装飾的な値でよい)。
+    BLOCK_BODY_LBRACE='regexp:\{\n?'
+    BLOCK_END='regexp://\}'
+    INLINE_START='regexp:@<'
+    INLINE_NAME='regexp:[a-zA-Z0-9]+'
+    INLINE_TAG_CLOSE='regexp:>'
+    INLINE_LBRACE='regexp:\{ *'
+    INLINE_RBRACE='regexp:\} *'
+    INLINE_FENCE='regexp:[$|]'
+    INLINE_CONTENT='regexp:[^\n]+'
+    UL_MARKER='regexp:\*+ '
+    OL_MARKER='regexp:[0-9]+\. '
+    DL_MARKER='regexp:: '
+    LINE_COMMENT='regexp:#@.*'
+    TEXT='regexp:.+'
+    RAW_TEXT='regexp:.+'
+    EOL='regexp:\n'
+  ]
+}
+
+reviewFile ::= item*
+
+// LINE_COMMENTはParserDefinition.getCommentTokens()に登録済みのため、
+// PsiBuilderが解析対象から自動的に隠しトークンとして除外し、PsiComment葉として
+// 木に挿入する。ゆえに文法規則としては明示的に扱わない
+// (コメント行は「隠しLINE_COMMENT + 実トークンEOL」となり、EOL単体の行として現れる)。
+private item ::= heading | block_command | list_item | paragraph | EOL
+
+// 見出し行はネストさせない(階層はStructure View側で計算。Step 9)。
+heading ::= HEADING_MARKER heading_option* heading_label? heading_caption? EOL {
+  pin=1
+  mixin="com.nowsprinting.intellijreview.psi.impl.ReviewHeadingMixin"
+}
+// 開き括弧/開き波括弧を消費した時点でpinし、閉じ側が無い壊れた行でも
+// 未消費トークンを残さず(次のitem()走査が停止して以降が全て未構造化に
+// なる事態を防ぐ)、行末までをエラー付きで自身の子として取り込む。
+private heading_option ::= LBRACKET HEADING_OPTION? RBRACKET { pin=1 }
+private heading_label ::= HEADING_LABEL_OPEN HEADING_LABEL_ID? HEADING_LABEL_CLOSE { pin=1 }
+private heading_caption ::= (TEXT | inline_command)+
+
+// ブロック命令: "//list[id][caption]{" + 本文行* + "//}" (複数行形式) または
+// "//noheader" のように本文なしの1行形式。
+block_command ::= BLOCK_COMMAND_NAME block_arg* block_body? {
+  pin=1
+  mixin="com.nowsprinting.intellijreview.psi.impl.ReviewBlockCommandMixin"
+}
+private block_arg ::= LBRACKET (BLOCK_ARG_TEXT | inline_command)* RBRACKET { pin=1 }
+
+block_body ::= BLOCK_BODY_LBRACE EOL body_line* BLOCK_END {
+  pin=1
+}
+private body_line ::= (RAW_TEXT | inline_command)* EOL
+
+// インライン命令: "@<name>{...}" / "@<name>$...$" / "@<name>|...|"。
+// $と|はどちらもレクサ上は同じINLINE_FENCEトークンなので文法上は区別不要。
+inline_command ::= INLINE_START INLINE_NAME INLINE_TAG_CLOSE inline_content {
+  pin=2
+  mixin="com.nowsprinting.intellijreview.psi.impl.ReviewInlineCommandMixin"
+}
+private inline_content ::= inline_brace_content | inline_fenced_content
+private inline_brace_content ::= INLINE_LBRACE INLINE_CONTENT* INLINE_RBRACE { pin=1 }
+private inline_fenced_content ::= INLINE_FENCE INLINE_CONTENT* INLINE_FENCE { pin=1 }
+
+list_item ::= (UL_MARKER | OL_MARKER | DL_MARKER) (TEXT | inline_command)* EOL
+
+paragraph ::= (TEXT | inline_command)+ EOL
