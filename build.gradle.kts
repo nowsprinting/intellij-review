@@ -21,9 +21,7 @@ dependencies {
     intellijPlatform {
         intellijIdea(providers.gradleProperty("platformVersion"))
         testFramework(TestFrameworkType.Platform)
-
-        // Add plugin dependencies for compilation here, for example:
-        // bundledPlugin("com.intellij.java")
+        testBundledPlugin("intellij.libraries.misc.plugin")
     }
 
     // IntelliJ Platform 2025.3(253.x)でfastutil/kotlinx-collections-immutableがCoreサブシステムから

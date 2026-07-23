@@ -202,3 +202,4 @@ vendor情報の実値設定、`<description>` タグの削除。
 - `github.com/nowsprinting/intellij-review` のリモート作成・push時期(現状ローカルに `origin` は未設定)。作成されるまで `build.yml` の `releaseDraft` ジョブとREADMEのビルドバッジは実体を指さない。
 - 初回タグ付きリリース前に、JetBrains Marketplaceの署名鍵・`PUBLISH_TOKEN` などのSecretsをGitHubリポジトリに登録する必要がある(未登録のままだと `release.yml` の `publishPlugin` ステップで失敗する)。
 - IU-262(2026.2系)でのStructure View互換性問題(`PsiTreeElementBase` 参照)の修正方針。`pluginUntilBuild` は設定しない方針のため、`ReviewFileStructureViewElement`/`ReviewHeadingStructureViewElement` の実装を2026.2以降のAPIに追従させる別タスクが必要(未対応のまま `verifyPlugin` はIU-262に対して失敗しうる)。
+  - **解決済み**(2026-07-23、`docs/plans/2026-07-23-idea-262-structure-view-module-migration.md`): `pluginSinceBuild=262`/`platformVersion=2026.2` へ引き上げ、Structure View実装を `PsiTreeElementBase` から `StructureViewTreeElement`/`ItemPresentation` の直接実装へ書き換え。`./gradlew verifyPlugin` はIU-262.8665.258に対して `Compatible` を確認済み。

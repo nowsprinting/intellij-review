@@ -1,33 +1,59 @@
 package com.nowsprinting.intellijreview.structure
 
 import com.intellij.ide.structureView.StructureViewTreeElement
-import com.intellij.ide.structureView.impl.common.PsiTreeElementBase
+import com.intellij.ide.util.treeView.smartTree.TreeElement
+import com.intellij.navigation.ItemPresentation
+import com.intellij.psi.NavigatablePsiElement
 import com.intellij.psi.PsiFile
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationCache
 import com.nowsprinting.intellijreview.lang.ReviewIcons
 import com.nowsprinting.intellijreview.psi.impl.ReviewHeadingMixin
 import javax.swing.Icon
 
-class ReviewFileStructureViewElement(psiFile: PsiFile) : PsiTreeElementBase<PsiFile>(psiFile) {
-    override fun getPresentableText(): String? = element?.name
+// PsiTreeElementBase (com.intellij.ide.structureView.impl.common) was split into the
+// intellij.platform.structureView module by IntelliJ Platform 2026.2's modularization,
+// requiring an extra dependency declaration. StructureViewTreeElement/ItemPresentation are
+// stable public APIs unaffected by that split, so implementing them directly avoids needing
+// any extra dependency declaration.
+class ReviewFileStructureViewElement(private val psiFile: PsiFile) : StructureViewTreeElement, ItemPresentation {
+    override fun getValue(): PsiFile = psiFile
+    override fun getPresentation(): ItemPresentation = this
+    override fun getPresentableText(): String? = psiFile.name
+    override fun getLocationString(): String? = null
+    override fun getIcon(unused: Boolean): Icon? = null
 
-    override fun getChildrenBase(): Collection<StructureViewTreeElement> {
-        val file = element ?: return emptyList()
-        return ReviewHeadingTreeBuilder.build(file).map { ReviewHeadingStructureViewElement(it) }
+    override fun getChildren(): Array<TreeElement> =
+        ReviewHeadingTreeBuilder.build(psiFile).map { ReviewHeadingStructureViewElement(it) as TreeElement }.toTypedArray()
+
+    override fun navigate(requestFocus: Boolean) {
+        (psiFile as? NavigatablePsiElement)?.navigate(requestFocus)
     }
+
+    override fun canNavigate(): Boolean = (psiFile as? NavigatablePsiElement)?.canNavigate() ?: false
+    override fun canNavigateToSource(): Boolean = (psiFile as? NavigatablePsiElement)?.canNavigateToSource() ?: false
 }
 
-class ReviewHeadingStructureViewElement(private val node: ReviewHeadingNode) :
-    PsiTreeElementBase<ReviewHeadingMixin>(node.heading) {
+class ReviewHeadingStructureViewElement(private val node: ReviewHeadingNode) : StructureViewTreeElement, ItemPresentation {
+    private val element: ReviewHeadingMixin get() = node.heading
 
-    // 計画書の要求どおり、表示テキストは常にキャプション(明示ラベルがあっても)、
-    // 明示ラベルはlocation string(右側の補助テキスト)として表示する。
-    override fun getPresentableText(): String? = element?.let { ReviewDeclarationCache.normalizeCaption(it) }
+    override fun getValue(): ReviewHeadingMixin = element
+    override fun getPresentation(): ItemPresentation = this
 
-    override fun getLocationString(): String? = element?.getLabel()
+    // Presentable text is always the caption, even when an explicit label is present;
+    // the explicit label is shown as the location string (the auxiliary text on the right) instead.
+    override fun getPresentableText(): String? = ReviewDeclarationCache.normalizeCaption(element)
 
-    override fun getIcon(open: Boolean): Icon? = if (element?.isColumn() == true) ReviewIcons.COLUMN else null
+    override fun getLocationString(): String? = element.getLabel()
 
-    override fun getChildrenBase(): Collection<StructureViewTreeElement> =
-        node.children.map { ReviewHeadingStructureViewElement(it) }
+    override fun getIcon(unused: Boolean): Icon? = if (element.isColumn()) ReviewIcons.COLUMN else null
+
+    override fun getChildren(): Array<TreeElement> =
+        node.children.map { ReviewHeadingStructureViewElement(it) as TreeElement }.toTypedArray()
+
+    override fun navigate(requestFocus: Boolean) {
+        (element as? NavigatablePsiElement)?.navigate(requestFocus)
+    }
+
+    override fun canNavigate(): Boolean = (element as? NavigatablePsiElement)?.canNavigate() ?: false
+    override fun canNavigateToSource(): Boolean = (element as? NavigatablePsiElement)?.canNavigateToSource() ?: false
 }
