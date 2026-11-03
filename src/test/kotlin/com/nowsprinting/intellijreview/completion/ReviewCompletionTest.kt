@@ -130,4 +130,39 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         assertTrue(strings.contains("label1"))
         assertFalse(strings.contains("other1"))
     }
+
+    fun testimgの候補に同一ファイルの画像と章IDが出て他章の画像は出ない() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
+        myFixture.addFileToProject("chapter1.re", "= Chapter 1\n//image[other1][caption]\n")
+        myFixture.configureByText("a.re", "= A\n//image[img1][caption]\n@<img>{<caret>}\n")
+        myFixture.completeBasic()
+        val strings = myFixture.lookupElementStrings!!
+        assertTrue(strings.contains("img1"))
+        assertTrue(strings.contains("chapter1"))
+        assertFalse(strings.contains("other1"))
+    }
+
+    fun testimgで章IDを選ぶとパイプが挿入されキャレットがその後ろに入る() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
+        myFixture.addFileToProject("chapter1.re", "= Chapter 1\n//image[other1][caption]\n")
+        myFixture.configureByText("a.re", "= A\n@<img>{chapt<caret>}\n")
+        myFixture.completeBasic()
+        myFixture.checkResult("= A\n@<img>{chapter1|<caret>}\n")
+    }
+
+    fun testimgで章IDとパイプの後は当該章の画像のみ補完される() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
+        myFixture.addFileToProject("chapter1.re", "= Chapter 1\n//image[other1][caption]\n")
+        myFixture.configureByText("a.re", "= A\n//image[img1][caption]\n@<img>{chapter1|<caret>}\n")
+        myFixture.completeBasic()
+        assertEquals(listOf("other1"), myFixture.lookupElementStrings)
+    }
+
+    fun testchapで章IDを選んでもパイプは挿入されない() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
+        myFixture.addFileToProject("chapter1.re", "= Chapter 1\n")
+        myFixture.configureByText("a.re", "= A\n@<chap>{chapt<caret>}\n")
+        myFixture.completeBasic()
+        myFixture.checkResult("= A\n@<chap>{chapter1<caret>}\n")
+    }
 }

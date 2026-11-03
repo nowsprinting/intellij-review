@@ -55,13 +55,23 @@ object ReviewReferenceIdCompletionProvider : CompletionProvider<CompletionParame
             return
         }
 
+        if (kind == ReviewDeclarationKind.CHAPTER) {
+            val chapters = ReviewDeclarationCache.byKind(project, kind)
+            result.withPrefixMatcher(typedSoFar).addAllElements(chapters.map { LookupElementBuilder.create(it.id) })
+            return
+        }
+
         val sameFileCandidates = ReviewDeclarationCache.byKind(project, kind)
             .filter { it.file == currentFile }
         val elements = sameFileCandidates.map { LookupElementBuilder.create(it.id) }.toMutableList()
         if (supportsCrossChapter) {
-            // "|"を続けて入力すれば他章参照になることを示すヒントとして章IDも候補に加える。
+            // 他章の宣言を全件並べると同一ファイルの候補が埋もれるため、章IDだけを候補に出し、
+            // 選択時に"|"を挿入して補完を再表示する二段階のドリルダウンにする。
             elements += ReviewDeclarationCache.byKind(project, ReviewDeclarationKind.CHAPTER)
-                .map { LookupElementBuilder.create(it.id).withTypeText("chapter") }
+                .map {
+                    LookupElementBuilder.create(it.id).withTypeText("chapter")
+                        .withInsertHandler(chapterDrillDownInsertHandler)
+                }
         }
         result.withPrefixMatcher(typedSoFar).addAllElements(elements)
     }

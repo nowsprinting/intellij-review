@@ -41,6 +41,7 @@
         <lang.psiStructureViewFactory language="ReVIEW"
                                        implementationClass="com.nowsprinting.intellijreview.structure.ReviewStructureViewFactory"/>
         <enterHandlerDelegate implementation="com.nowsprinting.intellijreview.editor.ReviewListEnterHandler"/>
+        <typedHandler implementation="com.nowsprinting.intellijreview.completion.ReviewPipeTypedHandler"/>
     </extensions>
 
 </idea-plugin>

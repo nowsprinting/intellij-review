@@ -1,5 +1,6 @@
 package com.nowsprinting.intellijreview.completion
 
+import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.lookup.LookupElement
 
@@ -30,4 +31,15 @@ val inlineCommandInsertHandler: InsertHandler<LookupElement> =
         val tailOffset = context.tailOffset
         context.document.insertString(tailOffset, ">{}")
         context.editor.caretModel.moveToOffset(tailOffset + 2)
+    }
+
+// 既存の"ch01|id"上で章IDだけを選び直した場合に"|"が二重にならないよう、直後の"|"は再利用する。
+val chapterDrillDownInsertHandler: InsertHandler<LookupElement> =
+    InsertHandler { context, _ ->
+        val tailOffset = context.tailOffset
+        if (context.document.charsSequence.getOrNull(tailOffset) != '|') {
+            context.document.insertString(tailOffset, "|")
+        }
+        context.editor.caretModel.moveToOffset(tailOffset + 1)
+        AutoPopupController.getInstance(context.project).scheduleAutoPopup(context.editor)
     }
