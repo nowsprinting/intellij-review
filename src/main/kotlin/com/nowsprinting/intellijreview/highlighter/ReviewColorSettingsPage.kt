@@ -64,6 +64,7 @@ class ReviewColorSettingsPage : ColorSettingsPage {
             Inline @<b>{bold} text.
 
              * list item
+             1. numbered item
 
             #@ comment
         """.trimIndent()

@@ -47,9 +47,10 @@ EOL=\R
 HEADING_MARKER="="{1,6}
 LINE_COMMENT="#@"[^\r\n]*
 BLOCK_COMMAND_NAME="//"[a-z0-9]+
-UL_MARKER=\*{1,3}[ \t]
-OL_MARKER=[0-9]+"."[ \t]
-DL_MARKER=":"[ \t]
+// Re:VIEWのリスト記法は行頭に空白が必須(空白なしの "* " は段落)。
+UL_MARKER=[ \t]+\*+[ \t]
+OL_MARKER=[ \t]+[0-9]+"."[ \t]
+DL_MARKER=[ \t]+":"[ \t]
 INLINE_NAME_CHARS=[a-zA-Z0-9]+
 WS=[ \t]+
 

@@ -226,24 +226,24 @@ class ReviewLexerAdapterTest : LexerTestCase() {
 
     fun test箇条書き3種をレクスできる() {
         val text = """
-            * item1
-            ** item2
-            1. first
-            : term
-        """.trimIndent() + "\n"
+            | * item1
+            | ** item2
+            | 1. first
+            | : term
+        """.trimMargin() + "\n"
         doTest(
             text,
             """
-            ReviewTokenType.UL_MARKER ('* ')
+            ReviewTokenType.UL_MARKER (' * ')
             ReviewTokenType.TEXT ('item1')
             ReviewTokenType.EOL ('\n')
-            ReviewTokenType.UL_MARKER ('** ')
+            ReviewTokenType.UL_MARKER (' ** ')
             ReviewTokenType.TEXT ('item2')
             ReviewTokenType.EOL ('\n')
-            ReviewTokenType.OL_MARKER ('1. ')
+            ReviewTokenType.OL_MARKER (' 1. ')
             ReviewTokenType.TEXT ('first')
             ReviewTokenType.EOL ('\n')
-            ReviewTokenType.DL_MARKER (': ')
+            ReviewTokenType.DL_MARKER (' : ')
             ReviewTokenType.TEXT ('term')
             ReviewTokenType.EOL ('\n')
 
