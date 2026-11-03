@@ -27,13 +27,13 @@ class ReviewSyntaxHighlighter : SyntaxHighlighterBase() {
         val BLOCK_BRACKETS: TextAttributesKey =
             createTextAttributesKey("REVIEW_BLOCK_BRACKETS", DefaultLanguageHighlighterColors.BRACKETS)
         val BLOCK_ARG: TextAttributesKey =
-            createTextAttributesKey("REVIEW_BLOCK_ARG", DefaultLanguageHighlighterColors.PARAMETER)
+            createTextAttributesKey("REVIEW_BLOCK_ARG", DefaultLanguageHighlighterColors.METADATA)
         val RAW_BODY: TextAttributesKey =
             createTextAttributesKey("REVIEW_RAW_BODY", DefaultLanguageHighlighterColors.STRING)
         val INLINE_COMMAND: TextAttributesKey =
-            createTextAttributesKey("REVIEW_INLINE_COMMAND", DefaultLanguageHighlighterColors.MARKUP_TAG)
+            createTextAttributesKey("REVIEW_INLINE_COMMAND", DefaultLanguageHighlighterColors.KEYWORD)
         val INLINE_CONTENT: TextAttributesKey =
-            createTextAttributesKey("REVIEW_INLINE_CONTENT", DefaultLanguageHighlighterColors.MARKUP_ENTITY)
+            createTextAttributesKey("REVIEW_INLINE_CONTENT", DefaultLanguageHighlighterColors.METADATA)
         val LIST_MARKER: TextAttributesKey =
             createTextAttributesKey("REVIEW_LIST_MARKER", DefaultLanguageHighlighterColors.KEYWORD)
         val COMMENT: TextAttributesKey =
