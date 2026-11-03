@@ -168,6 +168,22 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         assertSameElements(myFixture.lookupElementStrings!!, "fig1", "fig2")
     }
 
+    fun testindepimageのIDに章名ディレクトリ下の画像ファイル名が補完される() {
+        myFixture.addFileToProject("images/a/fig1.png", "")
+        myFixture.addFileToProject("images/a/fig2.png", "")
+        myFixture.configureByText("a.re", "//indepimage[<caret>]\n")
+        myFixture.completeBasic()
+        assertSameElements(myFixture.lookupElementStrings!!, "fig1", "fig2")
+    }
+
+    fun testnumberlessimageのIDに章名ディレクトリ下の画像ファイル名が補完される() {
+        myFixture.addFileToProject("images/a/fig1.png", "")
+        myFixture.addFileToProject("images/a/fig2.png", "")
+        myFixture.configureByText("a.re", "//numberlessimage[<caret>][caption]\n")
+        myFixture.completeBasic()
+        assertSameElements(myFixture.lookupElementStrings!!, "fig1", "fig2")
+    }
+
     fun testimageの2つ目の引数では画像ファイル名は補完されない() {
         myFixture.addFileToProject("images/a/fig1.png", "")
         myFixture.configureByText("a.re", "//image[id][<caret>]\n")

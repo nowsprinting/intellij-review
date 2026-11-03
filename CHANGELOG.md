@@ -9,7 +9,7 @@
 - Native language support for Re:VIEW (`.re`) files
     - Lexer, parser, and PSI (headings, block commands, inline commands)
     - Syntax highlighting and a color settings page
-    - Code completion for block/inline command names, block ID/heading label references, and image file names in `//image`
+    - Code completion for block/inline command names, block ID/heading label references, and image file names in image block commands
     - Reference resolution for chapters (`@<chap>`), block IDs (`@<list>` etc.), headings (`@<hd>` etc.), and footnotes/endnotes/bibliography
     - Find Usages for block IDs, heading labels, and chapter files
     - Rename refactoring for block IDs, heading labels, and chapter file names (Shift+F6)

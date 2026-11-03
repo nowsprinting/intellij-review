@@ -10,6 +10,8 @@ import com.nowsprinting.intellijreview.psi.impl.ReviewBlockCommandMixin
 // Re:VIEW本体は"images/<chapid>-<id>.ext"やビルダー別サブディレクトリも探索するが、
 // 候補の出所は"images/<chapid>/"配下に限定する(ディレクトリ分けの構成に合わせた要件)。
 object ReviewImageIdCompletionProvider : CompletionProvider<CompletionParameters>() {
+    private val IMAGE_COMMANDS = setOf("image", "indepimage", "numberlessimage")
+
     // Re:VIEW本体のBook::Base#image_typesと同じ拡張子集合。
     // 拡張子で絞らないと.DS_Store等の非画像ファイルまで候補に出る。
     private val IMAGE_EXTENSIONS = setOf("ai", "psd", "eps", "pdf", "tif", "tiff", "png", "bmp", "jpg", "jpeg", "gif", "svg")
@@ -21,7 +23,7 @@ object ReviewImageIdCompletionProvider : CompletionProvider<CompletionParameters
     ) {
         val position = parameters.position
         val block = position.parent as? ReviewBlockCommandMixin ?: return
-        if (block.getCommandName() != "image" || block.nameIdentifier != position) return
+        if (block.getCommandName() !in IMAGE_COMMANDS || block.nameIdentifier != position) return
 
         val reFile = parameters.originalFile.virtualFile ?: return
         val imageDir = reFile.parent?.findChild("images")?.findChild(reFile.nameWithoutExtension) ?: return
