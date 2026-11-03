@@ -50,6 +50,9 @@ intellijPlatform {
             }
         }
 
+        // ラムダ内で拡張アクセサ changelog を直接参照するとビルドスクリプト(Project)ごと捕捉され、
+        // configuration cache にシリアライズできないためローカル変数に退避する
+        val changelog = changelog
         changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
             with(changelog) {
                 renderItem(
