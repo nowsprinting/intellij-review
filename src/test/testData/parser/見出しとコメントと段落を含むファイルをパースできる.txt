@@ -3,7 +3,7 @@ Re:VIEW File
     PsiElement(ReviewTokenType.HEADING_MARKER)('=')
     PsiElement(ReviewTokenType.TEXT)('Chapter 1')
     PsiElement(ReviewTokenType.EOL)('\n')
-  PsiComment(ReviewTokenType.LINE_COMMENT)('#@ comment')
+  PsiComment(ReviewTokenType.LINE_COMMENT)('#@# comment')
   PsiElement(ReviewTokenType.EOL)('\n')
   ReviewParagraphImpl(PARAGRAPH)
     PsiElement(ReviewTokenType.TEXT)('Hello, Re:VIEW.')

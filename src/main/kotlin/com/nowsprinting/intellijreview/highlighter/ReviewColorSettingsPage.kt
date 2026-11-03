@@ -66,7 +66,7 @@ class ReviewColorSettingsPage : ColorSettingsPage {
              * list item
              1. numbered item
 
-            #@ comment
+            #@# comment
         """.trimIndent()
     }
 }

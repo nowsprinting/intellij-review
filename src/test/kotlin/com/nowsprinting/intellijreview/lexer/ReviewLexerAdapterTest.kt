@@ -252,20 +252,22 @@ class ReviewLexerAdapterTest : LexerTestCase() {
         checkCorrectRestart(text)
     }
 
-    fun testコメント各種をレクスできる() {
+    fun testシャープアットシャープで始まる行だけを行コメントとしてレクスする() {
         val text = """
-            #@ comment
+            #@# comment
+            #@#comment
             #@mapfile(foo.rb)
-            #@end
         """.trimIndent() + "\n"
         doTest(
             text,
             """
-            ReviewTokenType.LINE_COMMENT ('#@ comment')
+            ReviewTokenType.LINE_COMMENT ('#@# comment')
             ReviewTokenType.EOL ('\n')
-            ReviewTokenType.LINE_COMMENT ('#@mapfile(foo.rb)')
+            ReviewTokenType.LINE_COMMENT ('#@#comment')
             ReviewTokenType.EOL ('\n')
-            ReviewTokenType.LINE_COMMENT ('#@end')
+            ReviewTokenType.TEXT ('#')
+            ReviewTokenType.TEXT ('@')
+            ReviewTokenType.TEXT ('mapfile(foo.rb)')
             ReviewTokenType.EOL ('\n')
 
             """.trimIndent()

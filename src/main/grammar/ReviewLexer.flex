@@ -45,7 +45,7 @@ import static com.nowsprinting.intellijreview.psi.ReviewTypes.*;
 
 EOL=\R
 HEADING_MARKER="="{1,6}
-LINE_COMMENT="#@"[^\r\n]*
+LINE_COMMENT="#@#"[^\r\n]*
 BLOCK_COMMAND_NAME="//"[a-z0-9]+
 // Re:VIEWのリスト記法は行頭に空白が必須(空白なしの "* " は段落)。
 UL_MARKER=[ \t]+\*+[ \t]

@@ -41,7 +41,7 @@
     UL_MARKER='regexp:\*+ '
     OL_MARKER='regexp:[0-9]+\. '
     DL_MARKER='regexp:: '
-    LINE_COMMENT='regexp:#@.*'
+    LINE_COMMENT='regexp:#@#.*'
     TEXT='regexp:.+'
     RAW_TEXT='regexp:.+'
     EOL='regexp:\n'

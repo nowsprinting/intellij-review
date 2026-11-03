@@ -9,7 +9,7 @@ class ReviewParserTest : ParsingTestCase("parser", "re", ReviewParserDefinition(
         doCodeTest(
             """
             =Chapter 1
-            #@ comment
+            #@# comment
             Hello, Re:VIEW.
             """.trimIndent() + "\n"
         )

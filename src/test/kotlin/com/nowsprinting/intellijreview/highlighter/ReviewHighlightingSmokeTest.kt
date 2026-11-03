@@ -9,7 +9,7 @@ class ReviewHighlightingSmokeTest : BasePlatformTestCase() {
     fun test登録済みシンタックスハイライタで見出しとインライン命令が色付けされる() {
         myFixture.configureByText(
             "sample.re",
-            "= Chapter title\nHello @<b>{bold} text.\n#@ comment\n"
+            "= Chapter title\nHello @<b>{bold} text.\n#@# comment\n"
         )
         val highlighter = SyntaxHighlighterFactory.getSyntaxHighlighter(
             ReviewLanguage,
