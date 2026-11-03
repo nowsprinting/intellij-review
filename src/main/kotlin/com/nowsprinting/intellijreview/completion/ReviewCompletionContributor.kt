@@ -12,6 +12,7 @@ class ReviewCompletionContributor : CompletionContributor() {
         extend(CompletionType.BASIC, psiElement(ReviewTypes.INLINE_NAME), ReviewInlineCommandCompletionProvider)
         extend(CompletionType.BASIC, psiElement(ReviewTypes.HEADING_OPTION), ReviewHeadingOptionCompletionProvider)
         extend(CompletionType.BASIC, psiElement(ReviewTypes.INLINE_CONTENT), ReviewReferenceIdCompletionProvider)
+        extend(CompletionType.BASIC, psiElement(ReviewTypes.BLOCK_ARG_TEXT), ReviewImageIdCompletionProvider)
     }
 
     // BLOCK_COMMAND_NAME("//"+[a-z0-9]+)は小文字/数字のみを受理するため、既定のダミー識別子

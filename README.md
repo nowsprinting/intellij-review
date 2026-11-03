@@ -8,7 +8,7 @@ Native language support for [Re:VIEW](https://github.com/kmuto/review) (`.re`) f
 ## Features
 
 - **Syntax highlighting** — headings, block/inline commands, and a dedicated color settings page
-- **Code completion** — block/inline command names, and block ID/heading label references
+- **Code completion** — block/inline command names, block ID/heading label references, and image file names in `//image`
 - **Reference resolution** — chapters (`@<chap>`), block IDs (`@<list>` etc.), headings (`@<hd>` etc.), footnotes/endnotes/bibliography
 - **Find Usages** — block IDs, heading labels, and chapter files
 - **Rename refactoring** — block IDs, heading labels, and chapter file names (Shift+F6)

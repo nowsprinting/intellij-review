@@ -158,6 +158,23 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         assertEquals(listOf("other1"), myFixture.lookupElementStrings)
     }
 
+    fun testimageのIDに章名ディレクトリ下の画像ファイル名が拡張子なしで補完される() {
+        myFixture.addFileToProject("images/a/fig1.png", "")
+        myFixture.addFileToProject("images/a/fig2.pdf", "")
+        myFixture.addFileToProject("images/a/notes.txt", "")
+        myFixture.addFileToProject("images/other/fig3.png", "")
+        myFixture.configureByText("a.re", "//image[<caret>][caption]\n")
+        myFixture.completeBasic()
+        assertSameElements(myFixture.lookupElementStrings!!, "fig1", "fig2")
+    }
+
+    fun testimageの2つ目の引数では画像ファイル名は補完されない() {
+        myFixture.addFileToProject("images/a/fig1.png", "")
+        myFixture.configureByText("a.re", "//image[id][<caret>]\n")
+        myFixture.completeBasic()
+        assertFalse(myFixture.lookupElementStrings.orEmpty().contains("fig1"))
+    }
+
     fun testchapで章IDを選んでもパイプは挿入されない() {
         myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
         myFixture.addFileToProject("chapter1.re", "= Chapter 1\n")
