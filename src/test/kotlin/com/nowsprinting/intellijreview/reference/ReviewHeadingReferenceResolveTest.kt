@@ -67,4 +67,22 @@ class ReviewHeadingReferenceResolveTest : BasePlatformTestCase() {
         val reference = myFixture.getReferenceAtCaretPosition()!!
         assertNull(reference.resolve())
     }
+
+    fun test章をまたいで項の識別子だけで見出しに解決される() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - chapter2.re\n")
+        myFixture.addFileToProject("chapter1.re", "=Title\n== Sec\n==={sub}Subsec\n")
+        myFixture.configureByText("chapter2.re", "@<hd>{chapter1|s<caret>ub}\n")
+
+        val resolved = myFixture.getReferenceAtCaretPosition()!!.resolve() as? ReviewHeadingMixin
+        assertEquals("sub", resolved?.getLabel())
+    }
+
+    fun test同名の項が複数ある場合は項の識別子だけでは解決されない() {
+        myFixture.configureByText(
+            "a.re",
+            "=Title\n== S1\n=== Sub\n== S2\n=== Sub\n@<hd>{S<caret>ub}\n"
+        )
+
+        assertNull(myFixture.getReferenceAtCaretPosition()!!.resolve())
+    }
 }

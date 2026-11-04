@@ -5,9 +5,12 @@ import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.util.ProcessingContext
+import com.nowsprinting.intellijreview.declaration.ReviewDeclaration
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationCache
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
+import com.nowsprinting.intellijreview.psi.impl.ReviewHeadingMixin
 import com.nowsprinting.intellijreview.psi.impl.ReviewInlineCommandMixin
+import com.nowsprinting.intellijreview.reference.ReviewHeadingReference
 
 object ReviewReferenceIdCompletionProvider : CompletionProvider<CompletionParameters>() {
     override fun addCompletions(
@@ -49,9 +52,14 @@ object ReviewReferenceIdCompletionProvider : CompletionProvider<CompletionParame
             val chapterDeclaration =
                 ReviewDeclarationCache.byKind(project, ReviewDeclarationKind.CHAPTER).find { it.id == chapterId }
                     ?: return
-            val candidates = ReviewDeclarationCache.byKind(project, kind)
-                .filter { it.file == chapterDeclaration.file }
-            result.withPrefixMatcher(idTyped).addAllElements(candidates.map { LookupElementBuilder.create(it.id) })
+            val all = ReviewDeclarationCache.byKind(project, kind)
+            val candidates = all.filter { it.file == chapterDeclaration.file }
+            val elements = if (kind == ReviewDeclarationKind.HEADING) {
+                headingElements(all, candidates)
+            } else {
+                candidates.map { LookupElementBuilder.create(it.id) }
+            }
+            result.withPrefixMatcher(idTyped).addAllElements(elements)
             return
         }
 
@@ -61,9 +69,13 @@ object ReviewReferenceIdCompletionProvider : CompletionProvider<CompletionParame
             return
         }
 
-        val sameFileCandidates = ReviewDeclarationCache.byKind(project, kind)
-            .filter { it.file == currentFile }
-        val elements = sameFileCandidates.map { LookupElementBuilder.create(it.id) }.toMutableList()
+        val all = ReviewDeclarationCache.byKind(project, kind)
+        val sameFileCandidates = all.filter { it.file == currentFile }
+        val elements = if (kind == ReviewDeclarationKind.HEADING) {
+            headingElements(all, sameFileCandidates).toMutableList()
+        } else {
+            sameFileCandidates.map { LookupElementBuilder.create(it.id) }.toMutableList()
+        }
         if (supportsCrossChapter) {
             // 他章の宣言を全件並べると同一ファイルの候補が埋もれるため、章IDだけを候補に出し、
             // 選択時に"|"を挿入して補完を再表示する二段階のドリルダウンにする。
@@ -74,5 +86,20 @@ object ReviewReferenceIdCompletionProvider : CompletionProvider<CompletionParame
                 }
         }
         result.withPrefixMatcher(typedSoFar).addAllElements(elements)
+    }
+
+    // 見出し参照はRe:VIEW本体がネストパスの任意のセグメント単独でも解決するため、
+    // 節・項を階層に関わらずフラットに並べる。末尾セグメント単独では別の見出しに解決される
+    // (同名の項がある等)場合だけ、曖昧にならないネストパスを挿入する。
+    private fun headingElements(
+        all: List<ReviewDeclaration>,
+        candidates: List<ReviewDeclaration>,
+    ): List<LookupElementBuilder> = candidates.map { declaration ->
+        val leaf = declaration.id.substringAfterLast('|')
+        val lookup = if (ReviewHeadingReference.find(all, declaration.file, leaf) == declaration) leaf else declaration.id
+        val parentId = declaration.id.substringBeforeLast('|', "")
+        val parentTitle = candidates.find { it.id == parentId }
+            ?.let { ReviewDeclarationCache.normalizeCaption(it.element as ReviewHeadingMixin) }
+        LookupElementBuilder.create(lookup).withTypeText(parentTitle)
     }
 }

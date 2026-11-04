@@ -198,4 +198,41 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         myFixture.completeBasic()
         myFixture.checkResult("= A\n@<chap>{chapter1<caret>}\n")
     }
+
+    fun testhdで章IDとパイプの後は節も項もフラットに補完される() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
+        myFixture.addFileToProject("chapter1.re", "= Chapter 1\n=={sec}Sec Title\n=== Sub\n")
+        myFixture.configureByText("a.re", "= A\n@<hd>{chapter1|<caret>}\n")
+        myFixture.completeBasic()
+        assertSameElements(myFixture.lookupElementStrings!!, "sec", "Sub")
+    }
+
+    fun testhdの項の候補には所属する節タイトルが表示される() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
+        myFixture.addFileToProject("chapter1.re", "= Chapter 1\n=={sec}Sec Title\n=== Sub\n")
+        myFixture.configureByText("a.re", "= A\n@<hd>{chapter1|<caret>}\n")
+        myFixture.completeBasic()
+        val sub = myFixture.lookupElements!!.single { it.lookupString == "Sub" }
+        val presentation = com.intellij.codeInsight.lookup.LookupElementPresentation.renderElement(sub)
+        assertEquals("Sec Title", presentation.typeText)
+    }
+
+    fun testhdで同名の項が複数ある場合はネストパスで補完される() {
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n  - a.re\n")
+        myFixture.addFileToProject("chapter1.re", "= Chapter 1\n== S1\n=== Sub\n== S2\n=== Sub\n")
+        myFixture.configureByText("a.re", "= A\n@<hd>{chapter1|<caret>}\n")
+        myFixture.completeBasic()
+        assertSameElements(myFixture.lookupElementStrings!!, "S1", "S2", "S1|Sub", "S2|Sub")
+    }
+
+    fun testhdで同一ファイル内の節も項もフラットに補完され項には節タイトルが表示される() {
+        myFixture.configureByText("a.re", "= A\n=={sec}Sec Title\n=== Sub\n@<hd>{<caret>}\n")
+        myFixture.completeBasic()
+        val strings = myFixture.lookupElementStrings!!
+        assertTrue(strings.containsAll(listOf("sec", "Sub")))
+        assertFalse(strings.contains("sec|Sub"))
+        val sub = myFixture.lookupElements!!.single { it.lookupString == "Sub" }
+        val presentation = com.intellij.codeInsight.lookup.LookupElementPresentation.renderElement(sub)
+        assertEquals("Sec Title", presentation.typeText)
+    }
 }

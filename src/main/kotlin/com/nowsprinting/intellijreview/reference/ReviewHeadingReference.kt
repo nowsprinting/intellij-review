@@ -2,7 +2,9 @@ package com.nowsprinting.intellijreview.reference
 
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiReferenceBase
+import com.nowsprinting.intellijreview.declaration.ReviewDeclaration
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationCache
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
 
@@ -28,12 +30,19 @@ class ReviewHeadingReference(
             val chapterFile = ReviewDeclarationCache.byKind(project, ReviewDeclarationKind.CHAPTER)
                 .find { it.id == candidateChapterId }?.file
             if (chapterFile != null) {
-                val itemId = rawId.substring(pipeIndex + 1)
-                return ReviewDeclarationCache.byKind(project, kind)
-                    .find { it.file == chapterFile && it.id == itemId }?.element
+                return find(ReviewDeclarationCache.byKind(project, kind), chapterFile, rawId.substring(pipeIndex + 1))?.element
             }
         }
-        return ReviewDeclarationCache.byKind(project, kind)
-            .find { it.file == element.containingFile && it.id == rawId }?.element
+        return find(ReviewDeclarationCache.byKind(project, kind), element.containingFile, rawId)?.element
+    }
+
+    companion object {
+        // Re:VIEW本体のIndex#[]と同じく、完全一致がなければ"|"区切りのいずれかのセグメントが
+        // 一致する宣言を探し、複数あれば曖昧として解決しない。
+        fun find(declarations: List<ReviewDeclaration>, file: PsiFile, itemId: String): ReviewDeclaration? {
+            val inFile = declarations.filter { it.file == file }
+            inFile.find { it.id == itemId }?.let { return it }
+            return inFile.filter { itemId in it.id.split('|') }.singleOrNull()
+        }
     }
 }
