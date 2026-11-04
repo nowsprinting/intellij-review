@@ -2,7 +2,7 @@ package com.nowsprinting.intellijreview.editor
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
-class ReviewListEnterHandlerTest : BasePlatformTestCase() {
+class ReviewContinuationEnterHandlerTest : BasePlatformTestCase() {
     private fun doTest(before: String, after: String) {
         myFixture.configureByText("sample.re", before)
         myFixture.type('\n')
@@ -26,6 +26,15 @@ class ReviewListEnterHandlerTest : BasePlatformTestCase() {
 
     fun test行頭に空白のないアスタリスクは継続しない() =
         doTest("* foo<caret>\n", "* foo\n<caret>\n")
+
+    fun testコメント行の行末でEnterすると次行にコメント記号が入る() =
+        doTest("#@# foo<caret>\n", "#@# foo\n#@# <caret>\n")
+
+    fun testコメント行の途中でEnterすると後半もコメントになる() =
+        doTest("#@# foo<caret>bar\n", "#@# foo\n#@# <caret>bar\n")
+
+    fun test空のコメント行でEnterするとコメント記号が消える() =
+        doTest("#@# foo\n#@# <caret>\n", "#@# foo\n<caret>\n")
 
     fun testブロック本文中のリスト風の行は継続しない() =
         doTest("//emlist{\n * foo<caret>\n//}\n", "//emlist{\n * foo\n <caret>\n//}\n")

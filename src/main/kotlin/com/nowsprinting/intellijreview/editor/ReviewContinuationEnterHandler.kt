@@ -10,7 +10,7 @@ import com.intellij.psi.PsiFile
 import com.nowsprinting.intellijreview.psi.ReviewFile
 import com.nowsprinting.intellijreview.psi.ReviewTypes
 
-class ReviewListEnterHandler : EnterHandlerDelegateAdapter() {
+class ReviewContinuationEnterHandler : EnterHandlerDelegateAdapter() {
     override fun postProcessEnter(file: PsiFile, editor: Editor, dataContext: DataContext): Result {
         if (file !is ReviewFile || editor !is EditorEx) return Result.Continue
         val document = editor.document
@@ -22,19 +22,28 @@ class ReviewListEnterHandler : EnterHandlerDelegateAdapter() {
         // 正規表現だけで判定するとブロック本文中の " * " まで継続してしまうため、
         // 文脈を解釈済みのハイライタのトークン種別で判定する(PSIはEnter直後に未コミット)。
         val tokenType = editor.highlighter.createIterator(prevStart).tokenType
-        if (tokenType != ReviewTypes.UL_MARKER && tokenType != ReviewTypes.OL_MARKER) return Result.Continue
-
         val prevLine = document.getText(TextRange(prevStart, document.getLineEndOffset(line - 1)))
-        val match = MARKER.find(prevLine) ?: return Result.Continue
-        val (indent, bullet, number, space) = match.destructured
+        val match: MatchResult
+        val prefix: String
+        when (tokenType) {
+            ReviewTypes.UL_MARKER, ReviewTypes.OL_MARKER -> {
+                match = MARKER.find(prevLine) ?: return Result.Continue
+                val (indent, bullet, number, space) = match.destructured
+                val next = if (number.isEmpty()) bullet else "${number.toBigInteger().inc()}."
+                prefix = indent + next + space
+            }
+            ReviewTypes.LINE_COMMENT -> {
+                match = COMMENT.find(prevLine) ?: return Result.Continue
+                prefix = match.value
+            }
+            else -> return Result.Continue
+        }
 
-        if (prevLine.isBlank() || prevLine.length == match.value.length) {
-            // 空の項目でEnterしたらマーカーを消してリストを抜ける(Markdownと同じ挙動)
+        if (prevLine.length == match.value.length) {
+            // 空の項目・空のコメント行でEnterしたらプレフィックスを消して抜ける(Markdownのリストと同じ挙動)
             document.deleteString(prevStart, caret)
             editor.caretModel.moveToOffset(prevStart)
         } else {
-            val next = if (number.isEmpty()) bullet else "${number.toBigInteger().inc()}."
-            val prefix = indent + next + space
             val lineStart = document.getLineStartOffset(line)
             document.replaceString(lineStart, caret, prefix)
             editor.caretModel.moveToOffset(lineStart + prefix.length)
@@ -44,5 +53,6 @@ class ReviewListEnterHandler : EnterHandlerDelegateAdapter() {
 
     private companion object {
         val MARKER = Regex("""^([ \t]+)(?:(\*+)|(\d+)\.)([ \t])[ \t]*""")
+        val COMMENT = Regex("""^#@#[ \t]*""")
     }
 }
