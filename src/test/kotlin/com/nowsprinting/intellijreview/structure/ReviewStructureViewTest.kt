@@ -101,6 +101,15 @@ class ReviewStructureViewTest : BasePlatformTestCase() {
         assertNotNull(builder)
     }
 
+    fun testファイルノードは表示されずchapter見出しがトップ要素になる() {
+        myFixture.configureByText("structure_root_hidden.re", "=Chapter\n")
+
+        val builder = ReviewStructureViewFactory().getStructureViewBuilder(myFixture.file)
+            as com.intellij.ide.structureView.TreeBasedStructureViewBuilder
+
+        assertFalse(builder.isRootNodeShown)
+    }
+
     fun testファイルルート要素経由でも見出しツリーを取得できる() {
         myFixture.configureByText("structure_file_root.re", "=Chapter\n==Section\n")
 

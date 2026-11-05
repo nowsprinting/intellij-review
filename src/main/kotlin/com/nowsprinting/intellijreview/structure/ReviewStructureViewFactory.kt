@@ -12,5 +12,7 @@ class ReviewStructureViewFactory : PsiStructureViewFactory {
         object : TreeBasedStructureViewBuilder() {
             override fun createStructureViewModel(editor: Editor?): StructureViewModel =
                 ReviewStructureViewModel(psiFile, editor)
+
+            override fun isRootNodeShown(): Boolean = false
         }
 }
