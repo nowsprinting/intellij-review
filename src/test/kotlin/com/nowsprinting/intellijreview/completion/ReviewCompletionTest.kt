@@ -29,6 +29,28 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         assertTrue(strings.contains("fn"))
     }
 
+    fun testreview_ext_rbでdefinlineされたユーザー命令もインライン名の候補に出る() {
+        myFixture.addFileToProject(
+            "review-ext.rb",
+            """
+            module ReVIEW
+              module BuilderOverride
+                Compiler.definline :bidx
+                Compiler.definline(:iidx)
+                # Compiler.definline :commented
+              end
+            end
+            """.trimIndent(),
+        )
+        myFixture.configureByText("a.re", "@<<caret>\n")
+        myFixture.completeBasic()
+        val strings = myFixture.lookupElementStrings!!
+        assertTrue(strings.contains("b"))
+        assertTrue(strings.contains("bidx"))
+        assertTrue(strings.contains("iidx"))
+        assertFalse(strings.contains("commented"))
+    }
+
     fun testインライン命令選択で山括弧と波括弧が挿入されキャレットが中に入る() {
         myFixture.configureByText("a.re", "@<<caret>\n")
         myFixture.completeBasic()
