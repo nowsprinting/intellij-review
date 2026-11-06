@@ -42,6 +42,7 @@
                                        implementationClass="com.nowsprinting.intellijreview.structure.ReviewStructureViewFactory"/>
         <enterHandlerDelegate implementation="com.nowsprinting.intellijreview.editor.ReviewContinuationEnterHandler"/>
         <typedHandler implementation="com.nowsprinting.intellijreview.completion.ReviewPipeTypedHandler"/>
+        <annotator language="ReVIEW" implementationClass="com.nowsprinting.intellijreview.annotator.ReviewAnnotator"/>
     </extensions>
 
 </idea-plugin>

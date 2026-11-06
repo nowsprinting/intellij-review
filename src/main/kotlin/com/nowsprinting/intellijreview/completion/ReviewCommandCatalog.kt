@@ -1,5 +1,7 @@
 package com.nowsprinting.intellijreview.completion
 
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.psi.PsiFile
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
 
 // コマンド名はRe:VIEW本体(lib/review/compiler.rb の defblock/defsingle/definline 登録)を
@@ -67,6 +69,21 @@ object ReviewCommandCatalog {
         "ttb", "u", "raw", "br", "m", "uchar", "idx", "hidx", "comment", "include", "embed", "pageref",
         "w", "wb", "ttbold", "hint", "maru", "keytop", "labelref", "ref",
     )
+
+    // 行頭アンカーで"#"コメント行の定義を除外する。Rubyを構文解析しないのは、
+    // review-ext.rbでのdefinlineはモジュール直下に1行で書く慣習が定着しているため。
+    private val DEFINLINE = Regex("""^\s*(?:ReVIEW::)?Compiler\.definline\s*\(?\s*:(\w+)""", RegexOption.MULTILINE)
+
+    // 組み込み命令に、review-ext.rbでユーザーが追加した命令を加えたもの。
+    // Re:VIEWはreview-ext.rbをbookのベースディレクトリから読む。.reファイルと同じディレクトリに
+    // 置く構成(articles/配下)を前提とし、images/探索(ReviewImageIdCompletionProvider)と揃えた。
+    // VfsUtilCore.loadTextでなくDocument経由で読むのは、エディタで編集中の未保存の定義も拾うため。
+    // ponytail: 呼び出しごとにreview-ext.rbを走査する。数KBの想定で、重くなればCachedValueに載せる
+    fun inlineCommands(file: PsiFile): List<String> {
+        val extFile = file.virtualFile?.parent?.findChild("review-ext.rb") ?: return INLINE_COMMANDS
+        val text = FileDocumentManager.getInstance().getDocument(extFile)?.text ?: return INLINE_COMMANDS
+        return (INLINE_COMMANDS + DEFINLINE.findAll(text).map { it.groupValues[1] }).distinct()
+    }
 
     // 参照系インライン命令から、ReviewDeclarationCacheのどのkindのIDを補完すべきかへの対応表。
     // "column"はHEADINGとは別のCOLUMN kindを持つ(deepwikiでReVIEW本体のColumnIndexが

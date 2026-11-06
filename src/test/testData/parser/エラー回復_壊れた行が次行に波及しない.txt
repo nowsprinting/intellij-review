@@ -1,15 +1,15 @@
 Re:VIEW File
   ReviewParagraphImpl(PARAGRAPH)
-    PsiElement(ReviewTokenType.TEXT)('Hello ')
+    PsiElement(text)('Hello ')
     ReviewInlineCommandImpl(INLINE_COMMAND)
-      PsiElement(ReviewTokenType.INLINE_START)('@<')
-      PsiElement(ReviewTokenType.INLINE_NAME)('b')
-      PsiElement(ReviewTokenType.INLINE_TAG_CLOSE)('>')
-      PsiElement(ReviewTokenType.INLINE_LBRACE)('{')
-      PsiElement(ReviewTokenType.INLINE_CONTENT)('world')
-      PsiErrorElement:ReviewTokenType.INLINE_CONTENT or ReviewTokenType.INLINE_RBRACE expected
+      PsiElement(@<)('@<')
+      PsiElement(inline command name)('b')
+      PsiElement(>)('>')
+      PsiElement({)('{')
+      PsiElement(inline content)('world')
+      PsiErrorElement:inline content or '}' expected
         <empty list>
-    PsiElement(ReviewTokenType.EOL)('\n')
+    PsiElement(end of line)('\n')
   ReviewParagraphImpl(PARAGRAPH)
-    PsiElement(ReviewTokenType.TEXT)('Next paragraph.')
-    PsiElement(ReviewTokenType.EOL)('\n')
+    PsiElement(text)('Next paragraph.')
+    PsiElement(end of line)('\n')
