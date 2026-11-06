@@ -12,7 +12,7 @@ object ReviewBlockCommandCompletionProvider : CompletionProvider<CompletionParam
         context: ProcessingContext,
         result: CompletionResultSet,
     ) {
-        for (spec in ReviewCommandCatalog.BLOCK_COMMANDS) {
+        for (spec in ReviewCommandCatalog.blockCommands(parameters.originalFile)) {
             result.addElement(
                 LookupElementBuilder.create(spec.name).withInsertHandler(blockCommandInsertHandler(spec.template))
             )

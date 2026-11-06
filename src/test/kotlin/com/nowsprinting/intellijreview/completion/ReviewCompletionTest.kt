@@ -29,6 +29,42 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         assertTrue(strings.contains("fn"))
     }
 
+    private fun completeBlockWithExt(name: String): String {
+        myFixture.addFileToProject(
+            "review-ext.rb",
+            "ReVIEW::Compiler.defblock :myblock, 0..1\n" +
+                "Compiler.defblock(:myargs, 2..3)\n" +
+                "Compiler.defblock :mynoargs, 0\n" +
+                "Compiler.defsingle :mysingle, 2\n" +
+                "Compiler.defminicolumn :mycolumn, 0..1\n",
+        )
+        myFixture.configureByText("a.re", "//<caret>\n")
+        myFixture.completeBasic()
+        myFixture.type("$name\n")
+        return myFixture.editor.document.text.substring(0, myFixture.caretOffset) + "<caret>" +
+            myFixture.editor.document.text.substring(myFixture.caretOffset)
+    }
+
+    fun testreview_ext_rbでdefblockされた命令は引数の数に応じた括弧と本文付きで補完される() {
+        assertEquals("//myblock[<caret>]{\n\n//}\n", completeBlockWithExt("myblock"))
+    }
+
+    fun testreview_ext_rbでdefblockされた命令は最小引数の数だけ括弧が入る() {
+        assertEquals("//myargs[<caret>][]{\n\n//}\n", completeBlockWithExt("myargs"))
+    }
+
+    fun testreview_ext_rbで引数なしでdefblockされた命令は本文だけが入る() {
+        assertEquals("//mynoargs{\n<caret>\n//}\n", completeBlockWithExt("mynoargs"))
+    }
+
+    fun testreview_ext_rbでdefsingleされた命令は本文なしで補完される() {
+        assertEquals("//mysingle[<caret>][]\n", completeBlockWithExt("mysingle"))
+    }
+
+    fun testreview_ext_rbでdefminicolumnされた命令はキャプションと本文付きで補完される() {
+        assertEquals("//mycolumn[<caret>]{\n\n//}\n", completeBlockWithExt("mycolumn"))
+    }
+
     fun testreview_ext_rbでdefinlineされたユーザー命令もインライン名の候補に出る() {
         myFixture.addFileToProject(
             "review-ext.rb",

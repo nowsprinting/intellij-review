@@ -49,7 +49,7 @@ class ReviewAnnotator : Annotator {
     private fun annotateBlockCommand(block: ReviewBlockCommandMixin, holder: AnnotationHolder) {
         val nameLeaf = block.node.findChildByType(ReviewTypes.BLOCK_COMMAND_NAME)!!
         val name = block.getCommandName()
-        if (name !in ReviewCommandCatalog.blockCommandNames(block.containingFile)) {
+        if (name !in ReviewCommandCatalog.blockCommands(block.containingFile).map { it.name }) {
             holder.newAnnotation(HighlightSeverity.ERROR, ReviewBundle.message("annotator.unknownBlockCommand", name))
                 .range(nameLeaf.textRange).create()
         }

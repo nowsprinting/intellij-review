@@ -73,25 +73,37 @@ object ReviewCommandCatalog {
     // 行頭アンカーで"#"コメント行の定義を除外する。Rubyを構文解析しないのは、
     // review-ext.rbでのdefinline等はモジュール直下に1行で書く慣習が定着しているため。
     private val DEFINLINE = Regex("""^\s*(?:ReVIEW::)?Compiler\.definline\s*\(?\s*:(\w+)""", RegexOption.MULTILINE)
+    // 引数の数("2"や"0..1")も読み取り、補完で挿入する括弧の数に使う。
     private val DEFBLOCK = Regex(
-        """^\s*(?:ReVIEW::)?Compiler\.(?:defblock|defsingle|defminicolumn)\s*\(?\s*:(\w+)""",
+        """^\s*(?:ReVIEW::)?Compiler\.(defblock|defsingle|defminicolumn)\s*\(?\s*:(\w+)(?:\s*,\s*(\d+)(?:\.\.(\.?)(\d+))?)?""",
         RegexOption.MULTILINE,
     )
 
     // 組み込み命令に、review-ext.rbでユーザーが追加した命令を加えたもの。
-    fun inlineCommands(file: PsiFile): List<String> = (INLINE_COMMANDS + userDefined(file, DEFINLINE)).distinct()
+    fun inlineCommands(file: PsiFile): List<String> =
+        (INLINE_COMMANDS + DEFINLINE.findAll(reviewExtText(file)).map { it.groupValues[1] }).distinct()
 
-    fun blockCommandNames(file: PsiFile): List<String> =
-        (BLOCK_COMMANDS.map { it.name } + userDefined(file, DEFBLOCK)).distinct()
+    fun blockCommands(file: PsiFile): List<ReviewCommandSpec> =
+        (BLOCK_COMMANDS + DEFBLOCK.findAll(reviewExtText(file)).map { userBlockSpec(it) }).distinctBy { it.name }
+
+    // 組み込みのテンプレートは命令ごとの手書きだが、ユーザー定義は引数の数しか分からないため機械的に組み立てる。
+    // 括弧の数は必須引数の数とし、省略可能な引数しか無い場合も1個は出す(組み込みのemlist(0..2)やnote(0..1)が
+    // キャプション用の括弧1個を持つのと揃えた)。
+    private fun userBlockSpec(match: MatchResult): ReviewCommandSpec {
+        val (method, name, minText, exclusive, maxText) = match.destructured
+        val min = minText.toIntOrNull() ?: 0
+        val max = maxText.toIntOrNull()?.let { if (exclusive.isEmpty()) it else it - 1 } ?: min
+        val brackets = "[]".repeat(if (max == 0) 0 else maxOf(min, 1))
+        return ReviewCommandSpec(name, if (method == "defsingle") brackets else brackets + BODY_ONLY)
+    }
 
     // Re:VIEWはreview-ext.rbをbookのベースディレクトリから読む。.reファイルと同じディレクトリに
     // 置く構成(articles/配下)を前提とし、images/探索(ReviewImageIdCompletionProvider)と揃えた。
     // VfsUtilCore.loadTextでなくDocument経由で読むのは、エディタで編集中の未保存の定義も拾うため。
     // ponytail: 呼び出しごとにreview-ext.rbを走査する。数KBの想定で、重くなればCachedValueに載せる
-    private fun userDefined(file: PsiFile, declaration: Regex): List<String> {
-        val extFile = file.virtualFile?.parent?.findChild("review-ext.rb") ?: return emptyList()
-        val text = FileDocumentManager.getInstance().getDocument(extFile)?.text ?: return emptyList()
-        return declaration.findAll(text).map { it.groupValues[1] }.toList()
+    private fun reviewExtText(file: PsiFile): String {
+        val extFile = file.virtualFile?.parent?.findChild("review-ext.rb") ?: return ""
+        return FileDocumentManager.getInstance().getDocument(extFile)?.text ?: ""
     }
 
     // 参照系インライン命令から、ReviewDeclarationCacheのどのkindのIDを補完すべきかへの対応表。
