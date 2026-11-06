@@ -23,7 +23,7 @@ class ReviewAnnotator : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         when {
             element is ReviewInlineCommandMixin -> annotateInlineCommand(element, holder)
-            element is ReviewBlockCommandMixin -> annotateUnclosedBlock(element, holder)
+            element is ReviewBlockCommandMixin -> annotateBlockCommand(element, holder)
             element is ReviewFile -> annotateFile(element, holder)
             element.elementType in URL_SCANNED_TOKENS -> annotateBareUrl(element, holder)
         }
@@ -46,10 +46,16 @@ class ReviewAnnotator : Annotator {
             .range(unresolved.rangeInElement.shiftRight(command.textRange.startOffset)).create()
     }
 
-    private fun annotateUnclosedBlock(block: ReviewBlockCommandMixin, holder: AnnotationHolder) {
+    private fun annotateBlockCommand(block: ReviewBlockCommandMixin, holder: AnnotationHolder) {
+        val nameLeaf = block.node.findChildByType(ReviewTypes.BLOCK_COMMAND_NAME)!!
+        val name = block.getCommandName()
+        if (name !in ReviewCommandCatalog.blockCommandNames(block.containingFile)) {
+            holder.newAnnotation(HighlightSeverity.ERROR, ReviewBundle.message("annotator.unknownBlockCommand", name))
+                .range(nameLeaf.textRange).create()
+        }
+
         val body = block.node.findChildByType(ReviewTypes.BLOCK_BODY) ?: return
         if (body.findChildByType(ReviewTypes.BLOCK_END) != null) return
-        val nameLeaf = block.node.findChildByType(ReviewTypes.BLOCK_COMMAND_NAME)!!
         holder.newAnnotation(HighlightSeverity.ERROR, ReviewBundle.message("annotator.unclosedBlock"))
             .range(nameLeaf.textRange).create()
     }

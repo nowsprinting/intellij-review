@@ -18,6 +18,18 @@ class ReviewAnnotatorTest : BasePlatformTestCase() {
         check("@<bidx>{x}\n")
     }
 
+    fun test未定義のブロック命令はエラーになる() {
+        check("<error descr=\"Unknown block command: //foo\">//foo</error>[x]\n")
+    }
+
+    fun testreview_ext_rbでdefblock_defsingle_defminicolumnされた命令はエラーにならない() {
+        myFixture.addFileToProject(
+            "review-ext.rb",
+            "ReVIEW::Compiler.defblock :myblock, 0..1\nCompiler.defsingle(:mysingle, 1)\nCompiler.defminicolumn :mycolumn, 0..1\n",
+        )
+        check("//myblock{\nfoo\n//}\n//mysingle[x]\n//mycolumn{\nfoo\n//}\n")
+    }
+
     fun test存在しないIDへの参照はエラーになる() {
         check("@<list>{<error descr=\"Cannot resolve 'nope'\">nope</error>}\n")
     }
