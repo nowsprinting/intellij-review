@@ -2,6 +2,7 @@ package com.nowsprinting.intellijreview.completion
 
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.psi.PsiFile
+import com.nowsprinting.intellijreview.declaration.ReviewBookLayout
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
 
 // コマンド名はRe:VIEW本体(lib/review/compiler.rb の defblock/defsingle/definline 登録)を
@@ -97,12 +98,11 @@ object ReviewCommandCatalog {
         return ReviewCommandSpec(name, if (method == "defsingle") brackets else brackets + BODY_ONLY)
     }
 
-    // Re:VIEWはreview-ext.rbをbookのベースディレクトリから読む。.reファイルと同じディレクトリに
-    // 置く構成(articles/配下)を前提とし、images/探索(ReviewImageIdCompletionProvider)と揃えた。
+    // Re:VIEWはreview-ext.rbをbookのベースディレクトリから読むため、contentdir配下の.reファイルと同じディレクトリでは探さない。
     // VfsUtilCore.loadTextでなくDocument経由で読むのは、エディタで編集中の未保存の定義も拾うため。
     // ponytail: 呼び出しごとにreview-ext.rbを走査する。数KBの想定で、重くなればCachedValueに載せる
     private fun reviewExtText(file: PsiFile): String {
-        val extFile = file.virtualFile?.parent?.findChild("review-ext.rb") ?: return ""
+        val extFile = file.virtualFile?.let { ReviewBookLayout.baseDir(file.project, it) }?.findChild("review-ext.rb") ?: return ""
         return FileDocumentManager.getInstance().getDocument(extFile)?.text ?: ""
     }
 

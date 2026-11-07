@@ -15,6 +15,16 @@ class ReviewReferenceResolveTest : BasePlatformTestCase() {
         assertEquals(chapterFile, reference.resolve())
     }
 
+    fun test章参照はconfigのcontentdir配下のファイルに解決される() {
+        myFixture.addFileToProject("config.yml", "contentdir: src\n")
+        myFixture.addFileToProject("catalog.yml", "CHAPS:\n  - chapter1.re\n")
+        val chapterFile = myFixture.addFileToProject("src/chapter1.re", "= Chapter 1\n")
+        myFixture.configureByText("a.re", "@<chap>{chap<caret>ter1}\n")
+
+        val reference = myFixture.getReferenceAtCaretPosition()!!
+        assertEquals(chapterFile, reference.resolve())
+    }
+
     fun testlist参照は同一ファイルのブロックに解決される() {
         myFixture.configureByText(
             "a.re",

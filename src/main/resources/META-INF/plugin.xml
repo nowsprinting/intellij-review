@@ -13,6 +13,8 @@
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <!-- YAMLプラグインを無効化したIDEでも.re側の機能は使えるよう、必須依存にはしない -->
+    <depends optional="true" config-file="review-yaml.xml">org.jetbrains.plugins.yaml</depends>
 
     <resource-bundle>messages.ReviewBundle</resource-bundle>
 

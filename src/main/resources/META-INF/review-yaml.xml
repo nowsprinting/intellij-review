@@ -1,0 +1,8 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <psi.referenceContributor language="yaml"
+                                  implementation="com.nowsprinting.intellijreview.reference.ReviewCatalogReferenceContributor"/>
+        <annotator language="yaml"
+                   implementationClass="com.nowsprinting.intellijreview.annotator.ReviewCatalogAnnotator"/>
+    </extensions>
+</idea-plugin>

@@ -5,10 +5,11 @@ import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.util.ProcessingContext
+import com.nowsprinting.intellijreview.declaration.ReviewBookLayout
 import com.nowsprinting.intellijreview.psi.impl.ReviewBlockCommandMixin
 
-// Re:VIEW本体は"images/<chapid>-<id>.ext"やビルダー別サブディレクトリも探索するが、
-// 候補の出所は"images/<chapid>/"配下に限定する(ディレクトリ分けの構成に合わせた要件)。
+// Re:VIEW本体は"<imagedir>/<chapid>-<id>.ext"やビルダー別サブディレクトリも探索するが、
+// 候補の出所は"<imagedir>/<chapid>/"配下に限定する(ディレクトリ分けの構成に合わせた要件)。
 object ReviewImageIdCompletionProvider : CompletionProvider<CompletionParameters>() {
     private val IMAGE_COMMANDS = setOf("image", "indepimage", "numberlessimage")
 
@@ -26,7 +27,7 @@ object ReviewImageIdCompletionProvider : CompletionProvider<CompletionParameters
         if (block.getCommandName() !in IMAGE_COMMANDS || block.nameIdentifier != position) return
 
         val reFile = parameters.originalFile.virtualFile ?: return
-        val imageDir = reFile.parent?.findChild("images")?.findChild(reFile.nameWithoutExtension) ?: return
+        val imageDir = ReviewBookLayout.imageDir(position.project, reFile)?.findChild(reFile.nameWithoutExtension) ?: return
         val ids = imageDir.children
             .filter { !it.isDirectory && it.extension?.lowercase() in IMAGE_EXTENSIONS }
             .map { it.nameWithoutExtension }

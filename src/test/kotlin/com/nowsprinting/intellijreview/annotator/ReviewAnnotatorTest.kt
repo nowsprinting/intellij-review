@@ -18,6 +18,14 @@ class ReviewAnnotatorTest : BasePlatformTestCase() {
         check("@<bidx>{x}\n")
     }
 
+    fun testcontentdir配下の原稿ではベースディレクトリのreview_ext_rbの命令がエラーにならない() {
+        myFixture.addFileToProject("config.yml", "contentdir: src\n")
+        myFixture.addFileToProject("review-ext.rb", "Compiler.definline :bidx\n")
+        val file = myFixture.addFileToProject("src/a.re", "@<bidx>{x}\n")
+        myFixture.configureFromExistingVirtualFile(file.virtualFile)
+        myFixture.checkHighlighting(true, false, false)
+    }
+
     fun test未定義のブロック命令はエラーになる() {
         check("<error descr=\"Unknown block command: //foo\">//foo</error>[x]\n")
     }

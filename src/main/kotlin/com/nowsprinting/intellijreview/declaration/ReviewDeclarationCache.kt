@@ -19,7 +19,6 @@ import com.nowsprinting.intellijreview.psi.impl.ReviewInlineCommandMixin
 // プロジェクト内の全.reファイルを走査して収集した宣言(章・ブロックID・見出しラベル)の
 // 一覧。Step 5の補完に加え、Step 6-7の参照解決でも同じキャッシュを再利用する。
 object ReviewDeclarationCache {
-    private const val CATALOG_YAML = "catalog.yml"
 
     // //imgtableは@<img>と@<table>の両方から参照されうるため複数kindを持つ。
     private val BLOCK_KINDS_BY_COMMAND: Map<String, List<ReviewDeclarationKind>> = mapOf(
@@ -110,13 +109,13 @@ object ReviewDeclarationCache {
 
     private fun chapterDeclarations(project: Project): List<ReviewDeclaration> {
         val scope = GlobalSearchScope.projectScope(project)
-        val catalogFile = FilenameIndex.getVirtualFilesByName(CATALOG_YAML, scope).firstOrNull() ?: return emptyList()
+        val catalogFile = FilenameIndex.getVirtualFilesByName(ReviewBookLayout.CATALOG_YAML, scope).firstOrNull() ?: return emptyList()
         val psiManager = PsiManager.getInstance(project)
         val catalogPsiFile = psiManager.findFile(catalogFile) ?: return emptyList()
-        val siblingDir = catalogFile.parent ?: return emptyList()
+        val chapterDir = ReviewBookLayout.chapterDir(project, catalogFile) ?: return emptyList()
 
         return ReviewCatalogYamlParser.parseChapterIds(catalogPsiFile.text).mapNotNull { id ->
-            val chapterFile = siblingDir.findChild("$id.re") ?: return@mapNotNull null
+            val chapterFile = chapterDir.findChild("$id.re") ?: return@mapNotNull null
             val chapterPsiFile = psiManager.findFile(chapterFile) ?: return@mapNotNull null
             ReviewDeclaration(id, ReviewDeclarationKind.CHAPTER, chapterPsiFile, chapterPsiFile)
         }

@@ -226,6 +226,25 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         assertSameElements(myFixture.lookupElementStrings!!, "fig1", "fig2")
     }
 
+    fun testcontentdir配下の原稿ではベースディレクトリのimages下の画像ファイル名が補完される() {
+        myFixture.addFileToProject("config.yml", "contentdir: src\n")
+        myFixture.addFileToProject("images/a/fig1.png", "")
+        myFixture.addFileToProject("src/images/a/fig2.png", "")
+        val file = myFixture.addFileToProject("src/a.re", "//image[<caret>][caption]\n")
+        myFixture.configureFromExistingVirtualFile(file.virtualFile)
+        myFixture.completeBasic()
+        assertSameElements(myFixture.lookupElementStrings!!, "fig1")
+    }
+
+    fun testconfigのimagedir下の画像ファイル名が補完される() {
+        myFixture.addFileToProject("config.yml", "imagedir: img\n")
+        myFixture.addFileToProject("img/a/fig1.png", "")
+        myFixture.addFileToProject("images/a/fig2.png", "")
+        myFixture.configureByText("a.re", "//image[<caret>][caption]\n")
+        myFixture.completeBasic()
+        assertSameElements(myFixture.lookupElementStrings!!, "fig1")
+    }
+
     fun testindepimageのIDに章名ディレクトリ下の画像ファイル名が補完される() {
         myFixture.addFileToProject("images/a/fig1.png", "")
         myFixture.addFileToProject("images/a/fig2.png", "")

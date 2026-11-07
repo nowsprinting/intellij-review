@@ -62,6 +62,7 @@ class ReviewFindUsagesTest : BasePlatformTestCase() {
         myFixture.addFileToProject("findusages_chapter2.re", "@<chap>{chapter1}\n")
         val chapterFile = myFixture.addFileToProject("chapter1.re", "=Chapter 1\n")
 
-        assertEquals(1, myFixture.findUsages(chapterFile).size)
+        val usageFiles = myFixture.findUsages(chapterFile).map { it.file?.name }.toSet()
+        assertEquals(setOf("findusages_chapter2.re", "catalog.yml"), usageFiles)
     }
 }

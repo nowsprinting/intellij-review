@@ -26,3 +26,11 @@ object ReviewCatalogYamlParser {
             .map { it.removeSuffix(".re") }
     }
 }
+
+// ReviewCatalogYamlParserと同じ理由でYAMLパーサを使わず、トップレベルの単一値キーだけを読む。
+object ReviewConfigYamlParser {
+    fun parseValue(text: String, key: String): String? {
+        val pattern = Regex("""^${Regex.escape(key)}:\s*(["']?)([^"'\s#]+)\1\s*(#.*)?$""")
+        return text.lineSequence().firstNotNullOfOrNull { pattern.matchEntire(it)?.groupValues?.get(2) }
+    }
+}
