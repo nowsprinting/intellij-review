@@ -7,8 +7,11 @@ import com.nowsprinting.intellijreview.lang.ReviewLanguage
 // 文言を差し替えるフックを持たないため、toString()自体を執筆者が読める表記にする。
 // 英字で始まらない表記はプラットフォームが'...'で囲むため、記号単体のトークンは引用符を付けずに返す。
 // toString()はPSI/レクサのデバッグ出力にも使われるので、表記はトークンごとに区別できるものにする。
+// IElementType.getDebugName()は@ApiStatus.InternalでPlugin Verifierに弾かれるため、表記はコンストラクタ引数から決める。
 class ReviewTokenType(debugName: String) : IElementType(debugName, ReviewLanguage) {
-    override fun toString(): String = DESCRIPTIONS[debugName] ?: debugName
+    private val description = DESCRIPTIONS[debugName] ?: debugName
+
+    override fun toString(): String = description
 
     companion object {
         private val DESCRIPTIONS = mapOf(
