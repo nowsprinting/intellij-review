@@ -2,6 +2,8 @@
     <extensions defaultExtensionNs="com.intellij">
         <psi.referenceContributor language="yaml"
                                   implementation="com.nowsprinting.intellijreview.reference.ReviewCatalogReferenceContributor"/>
+        <completion.contributor language="yaml"
+                                 implementationClass="com.nowsprinting.intellijreview.completion.ReviewCatalogCompletionContributor"/>
         <annotator language="yaml"
                    implementationClass="com.nowsprinting.intellijreview.annotator.ReviewCatalogAnnotator"/>
     </extensions>

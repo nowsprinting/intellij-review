@@ -3,7 +3,7 @@ package com.nowsprinting.intellijreview.declaration
 // catalog.ymlはPREDEF/CHAPS/APPENDIX/POSTDEFの4セクションからなる単純なYAMLリストのみを
 // 想定しているため、依存追加が必要なYAMLパーサ(snakeyaml等)は使わず行ベースで解析する。
 object ReviewCatalogYamlParser {
-    private val SECTION_ORDER = listOf("PREDEF", "CHAPS", "APPENDIX", "POSTDEF")
+    val SECTION_ORDER = listOf("PREDEF", "CHAPS", "APPENDIX", "POSTDEF")
     private val SECTION_HEADER = Regex("""^(\w+):\s*$""")
     private val LIST_ITEM = Regex("""^\s*-\s*(\S+\.re)\s*$""")
 

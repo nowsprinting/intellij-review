@@ -16,5 +16,5 @@
     - Find Usages for block IDs, heading labels, and chapter files
     - Rename refactoring for block IDs, heading labels, and chapter file names (Shift+F6)
     - Structure View with nested heading hierarchy and a dedicated icon for columns
-- Navigation from `.re` file names in `catalog.yml` to chapter files, updated on chapter file rename, with error highlighting for missing files (requires the bundled YAML plugin)
+- Navigation from `.re` file names in `catalog.yml` to chapter files, updated on chapter file rename, with error highlighting for missing files and completion of unlisted `.re` files and section keys (`PREDEF`, `CHAPS`, `APPENDIX`, `POSTDEF`) (requires the bundled YAML plugin)
 - Support for `contentdir` and `imagedir` in `config.yml` when locating chapter files listed in `catalog.yml`, `review-ext.rb`, and images
