@@ -103,7 +103,9 @@
       "Edit(~/.bashrc)",
       "Read(id_rsa)",
       "Read(id_ed25519)",
-      "Read(*token*)"
+      "Read(**/*token*.json)",
+      "Read(**/*token*.txt)",
+      "Read(**/.*token*)"
     ],
     "additionalDirectories": []
   },
