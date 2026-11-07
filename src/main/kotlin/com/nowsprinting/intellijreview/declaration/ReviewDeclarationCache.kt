@@ -4,7 +4,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FileTypeIndex
-import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
@@ -108,8 +107,7 @@ object ReviewDeclarationCache {
     }
 
     private fun chapterDeclarations(project: Project): List<ReviewDeclaration> {
-        val scope = GlobalSearchScope.projectScope(project)
-        val catalogFile = FilenameIndex.getVirtualFilesByName(ReviewBookLayout.CATALOG_YAML, scope).firstOrNull() ?: return emptyList()
+        val catalogFile = ReviewBookLayout.catalogFile(project) ?: return emptyList()
         val psiManager = PsiManager.getInstance(project)
         val catalogPsiFile = psiManager.findFile(catalogFile) ?: return emptyList()
         val chapterDir = ReviewBookLayout.chapterDir(project, catalogFile) ?: return emptyList()

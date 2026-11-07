@@ -23,6 +23,7 @@ Grammar-Kit/JFlex製のIntelliJ Platformプラグイン。プラグインID `com
   - `rename/` — `ElementManipulator`・`RefactoringSupportProvider`(Shift+F6)
   - `usages/` — `ReviewFindUsagesProvider`(独自`WordsScanner`)
   - `structure/` — Structure View(見出しツリー構築・column表示)
+  - `preview/` — 版面プレビュー(config.ymlのtexdocumentclassから字詰め・行数を算出し、行分割・改ページを見積もる分割エディタ)
 - `src/main/resources/META-INF/plugin.xml` — 拡張ポイント登録一式
 - `src/test/kotlin/com/nowsprinting/intellijreview/` — `src/main/kotlin`と同じパッケージ構成でテストを配置(`BasePlatformTestCase`ベース)
 - `src/test/testData/` — パーサーのゴールデンファイル等

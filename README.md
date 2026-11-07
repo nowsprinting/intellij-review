@@ -13,4 +13,5 @@ Native language support for [Re:VIEW](https://github.com/kmuto/review) (`.re`) f
 - **Find Usages** — block IDs, heading labels, and chapter files
 - **Rename refactoring** — block IDs, heading labels, and chapter file names (Shift+F6)
 - **Structure View** — nested heading hierarchy with a dedicated icon for columns
+- **Page layout preview** — a split editor pane drawing estimated PDF pages (line and page breaks, heading sizes, and images) from `texdocumentclass` in `config.yml`, with chapter/heading/list/image/table references filled in
 <!-- Plugin description end -->

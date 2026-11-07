@@ -45,6 +45,7 @@
         <enterHandlerDelegate implementation="com.nowsprinting.intellijreview.editor.ReviewContinuationEnterHandler"/>
         <typedHandler implementation="com.nowsprinting.intellijreview.completion.ReviewPipeTypedHandler"/>
         <annotator language="ReVIEW" implementationClass="com.nowsprinting.intellijreview.annotator.ReviewAnnotator"/>
+        <fileEditorProvider implementation="com.nowsprinting.intellijreview.preview.ReviewSplitEditorProvider"/>
     </extensions>
 
 </idea-plugin>
