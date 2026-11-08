@@ -74,14 +74,16 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.1.0
 
       - name: Run Tests
-        run: ./gradlew --no-configuration-cache test
+        run: ./gradlew --no-configuration-cache test koverHtmlReport
 
       - name: Upload Test Reports
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
           name: test-reports
-          path: build/reports/tests/
+          path: |
+            build/reports/tests/
+            build/reports/kover/html/
 
   verify:
     name: Verify
