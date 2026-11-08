@@ -72,6 +72,7 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         val pending = StringBuilder()
         var pendingFirstIndent = 0
         var pendingHangIndent = 0
+        var pendingOffset = -1
         var pendingIsListItem = false
         var afterDefinitionTerm = false
         var noindent = false
@@ -96,7 +97,7 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         }
 
         fun flush() {
-            if (pending.isNotEmpty()) elements += Text(pending.toString(), pendingFirstIndent, pendingHangIndent)
+            if (pending.isNotEmpty()) elements += Text(pending.toString(), pendingFirstIndent, pendingHangIndent, offset = pendingOffset)
             pending.setLength(0)
             pendingIsListItem = false
         }
@@ -107,11 +108,12 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
             inList = false
         }
 
-        fun start(text: String, firstIndent: Int, hangIndent: Int, isListItem: Boolean) {
+        fun start(text: String, firstIndent: Int, hangIndent: Int, isListItem: Boolean, offset: Int) {
             pending.append(text)
             pendingFirstIndent = firstIndent
             pendingHangIndent = hangIndent
             pendingIsListItem = isListItem
+            pendingOffset = offset
         }
 
         // Re:VIEWは空行までの連続した行を1段落に連結する。和文同士は改行を詰め、欧文同士は空白1つにする
@@ -127,11 +129,11 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
             val indented = node.text.firstOrNull()?.isWhitespace() == true
             when {
                 indented && (pendingIsListItem || afterDefinitionTerm) && pending.isNotEmpty() -> append(text.trim())
-                indented && afterDefinitionTerm -> start(text.trim(), 2, 2, true)
+                indented && afterDefinitionTerm -> start(text.trim(), 2, 2, true, node.startOffset)
                 pending.isNotEmpty() && !pendingIsListItem -> append(text.trim())
                 else -> {
                     endList()
-                    start(text.trim(), if (noindent) 0 else 1, 0, false)
+                    start(text.trim(), if (noindent) 0 else 1, 0, false, node.startOffset)
                     noindent = false
                 }
             }
@@ -148,11 +150,11 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
             when (marker.elementType) {
                 ReviewTypes.UL_MARKER -> {
                     val depth = marker.text.count { it == '*' }
-                    start("・$text", depth - 1, depth, true)
+                    start("・$text", depth - 1, depth, true, node.startOffset)
                 }
-                ReviewTypes.OL_MARKER -> start("${marker.text.trim()} $text", 1, 2, true)
+                ReviewTypes.OL_MARKER -> start("${marker.text.trim()} $text", 1, 2, true, node.startOffset)
                 else -> {
-                    elements += Text(text)
+                    elements += Text(text, offset = node.startOffset)
                     afterDefinitionTerm = true
                 }
             }
@@ -163,18 +165,19 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
             if (heading.isColumnClose() || option == "nodisp") return
             val caption = lineText(heading.node).trim()
             val level = heading.getLevel()
+            val offset = heading.node.startOffset
             when {
                 heading.isColumn() -> {
                     elements += Gap()
-                    elements += Text("■コラム　$caption", style = Style.HEADING)
+                    elements += Text("■コラム　$caption", style = Style.HEADING, offset = offset)
                     elements += Gap(0.5)
                 }
                 // jsbook.clsの\@makechapterhead: 前アキ2行、章番号(\huge)、1行アキ、章タイトル(\Huge)、後アキ3行
                 level == 1 -> {
                     elements += PageBreak
                     elements += Space(2.0)
-                    chapterLabel(file)?.let { elements += Raw(it, Style.CHAPTER_NUMBER); elements += Space(1.0) }
-                    elements += Text(caption, style = Style.CHAPTER_TITLE)
+                    chapterLabel(file)?.let { elements += Raw(it, Style.CHAPTER_NUMBER, offset); elements += Space(1.0) }
+                    elements += Text(caption, style = Style.CHAPTER_TITLE, offset = offset)
                     elements += Space(3.0)
                 }
                 // jsbook.clsの\section・\subsection: 前アキ1行・後アキ0.5行、\subsubsection以下: 前アキ1行・後アキなし
@@ -186,7 +189,7 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                         else -> Style.HEADING
                     }
                     elements += Gap()
-                    elements += Text(if (number != null) "$number　$caption" else caption, style = style)
+                    elements += Text(if (number != null) "$number　$caption" else caption, style = style, offset = offset)
                     if (level <= 3) elements += Gap(0.5)
                 }
             }
@@ -195,6 +198,8 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         fun block(block: ReviewBlockCommandMixin) {
             val name = block.getCommandName()
             val args = blockArgs(block)
+            // ponytail: ブロック内の各行はブロックの先頭位置で代表させる。長いコードの途中にスクロールを合わせるなら行ごとの位置を持たせる
+            val offset = block.node.startOffset
             when (name) {
                 in CODE_BLOCKS -> {
                     val caption = when (name) {
@@ -203,12 +208,12 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                         else -> args.lastOrNull()
                     }
                     elements += Gap(0.5)
-                    if (!caption.isNullOrBlank()) elements += Text(caption, style = Style.CAPTION)
+                    if (!caption.isNullOrBlank()) elements += Text(caption, style = Style.CAPTION, offset = offset)
                     val numbered = name.endsWith("num")
                     val padding = Padding(FRAME_SEP_PT / settings.baselineskipPt)
                     elements += padding
                     bodyLines(block).forEachIndexed { i, line ->
-                        elements += Raw(if (numbered) "${(i + 1).toString().padStart(2)}: $line" else line, Style.CODE)
+                        elements += Raw(if (numbered) "${(i + 1).toString().padStart(2)}: $line" else line, Style.CODE, offset)
                     }
                     elements += padding
                     elements += Gap(0.5)
@@ -218,16 +223,16 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                     val caption = args.getOrElse(if (name == "graph") 2 else 1) { "" }
                     val label = if (name in NUMBERED_GROUP) "${itemLabel(block)}: $caption" else caption
                     elements += Gap(0.5)
-                    if (name == "imgtable") elements += Text(label, style = Style.FLOAT_CAPTION)
-                    elements += figure(args.getOrElse(0) { "" }, if (name == "graph") null else args.getOrNull(2))
-                    if (name != "imgtable" && label.isNotBlank()) elements += Text(label, style = Style.FLOAT_CAPTION)
+                    if (name == "imgtable") elements += Text(label, style = Style.FLOAT_CAPTION, offset = offset)
+                    elements += figure(args.getOrElse(0) { "" }, if (name == "graph") null else args.getOrNull(2), offset)
+                    if (name != "imgtable" && label.isNotBlank()) elements += Text(label, style = Style.FLOAT_CAPTION, offset = offset)
                     elements += Gap(0.5)
                 }
                 "table" -> {
                     elements += Gap(0.5)
-                    elements += Text("${itemLabel(block)}: ${args.getOrElse(1) { "" }}", style = Style.FLOAT_CAPTION)
+                    elements += Text("${itemLabel(block)}: ${args.getOrElse(1) { "" }}", style = Style.FLOAT_CAPTION, offset = offset)
                     bodyLines(block).filterNot { TABLE_SEPARATOR.matches(it) }
-                        .forEach { elements += Raw(it.split(Regex("\t+")).joinToString(" │ ")) }
+                        .forEach { elements += Raw(it.split(Regex("\t+")).joinToString(" │ "), offset = offset) }
                     elements += Gap(0.5)
                 }
                 "noindent" -> noindent = true
@@ -238,8 +243,8 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                 else -> {
                     // note・memo・quoteなどの囲み: 本文は段落として組み、全角1字ぶん内側に寄せる
                     elements += Gap(0.5)
-                    args.lastOrNull()?.takeIf { it.isNotBlank() }?.let { elements += Text("■$it", 1, 1, Style.HEADING) }
-                    for (paragraph in paragraphs(bodyLines(block))) elements += Text(paragraph, 2, 1)
+                    args.lastOrNull()?.takeIf { it.isNotBlank() }?.let { elements += Text("■$it", 1, 1, Style.HEADING, offset) }
+                    for (paragraph in paragraphs(bodyLines(block))) elements += Text(paragraph, 2, 1, offset = offset)
                     elements += Gap(0.5)
                 }
             }
@@ -250,7 +255,7 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
 
     // Re:VIEWのimage_scale2width(既定で有効)により、scale=は画像の実寸でなく版面の幅に対する比として扱われる。
     // scale指定が無ければ、版面の幅を上限に画像の実寸で置かれる(\maxwidth)。
-    private fun figure(id: String, metric: String?): Figure {
+    private fun figure(id: String, metric: String?, offset: Int): Figure {
         // LaTeX向けにPDF・EPSを置き、EPUB向けに同名のPNGを並べる構成が多い。ImageIOはPDF・EPSを読めないため、
         // Re:VIEWが選ぶファイルが読めなければ同名の読める画像で代用する(縦横比は同じとみなす)。
         val image = findImage(id)?.let { found ->
@@ -261,7 +266,7 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         val ratio = min(1.0, scale ?: image?.let { it.naturalWidth * PT_PER_PX / settings.textWidthPt } ?: 1.0)
         val height = image?.let { ratio * settings.textWidthPt * it.naturalHeight / it.naturalWidth / settings.baselineskipPt }
             ?: PLACEHOLDER_IMAGE_LINES.toDouble()
-        return Figure(id, image?.image, ratio, min(height, settings.linesPerPage - 2.0))
+        return Figure(id, image?.image, ratio, min(height, settings.linesPerPage - 2.0), offset)
     }
 
     // Re:VIEW本体(Book::ImageFinder)と同じ探索順。ビルダー名はPDF出力のlatex。

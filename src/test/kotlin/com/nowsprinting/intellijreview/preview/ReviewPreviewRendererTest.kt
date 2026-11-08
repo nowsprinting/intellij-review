@@ -41,6 +41,14 @@ class ReviewPreviewRendererTest : BasePlatformTestCase() {
         assertEquals(listOf("　あいうえおかきくけ", "こさしすせそたちつて", "と"), lines)
     }
 
+    fun test行には元の原稿の位置が付き脚注には付かない() {
+        setUpBook("line_length=10zw,number_of_lines=30")
+
+        val placed = placedPages("あ@<fn>{a}\n\nい\n\n//footnote[a][注]\n").single()
+
+        assertEquals(listOf("　あ*1" to 0, "　い" to 11, "*1" to -1, "注" to -1), placed.mapNotNull { p -> (p.item as? Line)?.let { it.text to p.offset } })
+    }
+
     fun test行数を超えると改ページされる() {
         setUpBook("line_length=10zw,number_of_lines=2")
 

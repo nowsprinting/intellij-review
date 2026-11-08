@@ -44,10 +44,11 @@ object ReviewPageLayout {
     sealed interface Element
 
     // 行分割の対象になる文。firstIndent/hangIndentは全角何文字ぶん字下げするか。
-    data class Text(val text: String, val firstIndent: Int = 0, val hangIndent: Int = 0, val style: Style = Style.BODY) : Element
+    // offsetは原稿(.reファイル)中のこの要素の位置で、エディタとのスクロールの対応付けに使う。原稿に対応しないものは-1
+    data class Text(val text: String, val firstIndent: Int = 0, val hangIndent: Int = 0, val style: Style = Style.BODY, val offset: Int = -1) : Element
 
     // 行分割しない1行(コードや表の行)。版面からはみ出しても折り返さない。
-    data class Raw(val text: String, val style: Style = Style.BODY) : Element
+    data class Raw(val text: String, val style: Style = Style.BODY, val offset: Int = -1) : Element
 
     // 見出しや段落間の空き。ページ先頭では消える(TeXがページ先頭の垂直方向の空きを捨てるのと同じ)。
     data class Gap(val height: Double = 1.0) : Element
@@ -78,7 +79,7 @@ object ReviewPageLayout {
 
     // 図。ページをまたいで分割されないため、収まらなければ次のページへ送る。
     // widthRatioは版面の幅に対する図の幅の比。imageがnullなら画像が読めず、枠だけ描く。
-    data class Figure(val id: String, val image: BufferedImage?, val widthRatio: Double, override val height: Double) : Element, Item
+    data class Figure(val id: String, val image: BufferedImage?, val widthRatio: Double, override val height: Double, val offset: Int = -1) : Element, Item
 
     // コードの網掛け(framed.styのshaded)の上下の内側の余白
     data class Padding(override val height: Double) : Element, Item
@@ -88,8 +89,8 @@ object ReviewPageLayout {
         override val height: Double get() = 0.0
     }
 
-    // yはページ内の版面上端からの位置(行送り単位)
-    data class Placed(val y: Double, val item: Item)
+    // yはページ内の版面上端からの位置(行送り単位)。offsetは元のElementの原稿中の位置(脚注など対応しないものは-1)
+    data class Placed(val y: Double, val item: Item, val offset: Int = -1)
 
     // ponytail: 小書きの仮名(ァ・ッなど)は行頭に置けるものとし、禁則にしない
     private const val LINE_HEAD_FORBIDDEN = "、。，．・：；？！ー）」』】〕〉》｝］’”々ゝゞヽヾ,.:;?!)]}"
@@ -164,10 +165,10 @@ object ReviewPageLayout {
             y = 0.0
         }
         // 脚注はその番号を含む行と同じページに組むため、ページの残りから脚注の高さを差し引いて収まるかを見る
-        fun place(item: Item) {
+        fun place(item: Item, offset: Int = -1) {
             val notes = (item as? Line)?.tokens.orEmpty().filter { it.face == Face.NOTE_MARK }.mapNotNull { footnotes[it.text] }.map(::note)
             if (y + item.height + notesHeight(pageNotes + notes) > capacity + EPSILON && pages.last().isNotEmpty()) newPage()
-            pages.last() += Placed(y, item)
+            pages.last() += Placed(y, item, offset)
             y += item.height
             lastGap = 0.0
             pageNotes += notes
@@ -177,10 +178,10 @@ object ReviewPageLayout {
                 is Text -> {
                     val lines = wrap(element, settings)
                     val style = if (element.style == Style.FLOAT_CAPTION && lines.size > 1) Style.CAPTION else element.style
-                    lines.forEach { place(Line(it, style, lineHeight(style, settings))) }
+                    lines.forEach { place(Line(it, style, lineHeight(style, settings)), element.offset) }
                 }
-                is Raw -> place(Line(tokenize(element.text, element.style, settings), element.style, lineHeight(element.style, settings)))
-                is Figure -> place(element)
+                is Raw -> place(Line(tokenize(element.text, element.style, settings), element.style, lineHeight(element.style, settings)), element.offset)
+                is Figure -> place(element, element.offset)
                 is Padding -> place(element)
                 is Gap -> if (pages.last().isNotEmpty() && element.height > lastGap) {
                     y += element.height - lastGap

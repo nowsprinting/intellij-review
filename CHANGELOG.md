@@ -17,5 +17,5 @@
     - Rename refactoring for block IDs, heading labels, and chapter file names (Shift+F6)
     - Structure View with nested heading hierarchy and a dedicated icon for columns
 - Navigation from `.re` file names in `catalog.yml` to chapter files, updated on chapter file rename, with error highlighting for missing files and completion of unlisted `.re` files and section keys (`PREDEF`, `CHAPS`, `APPENDIX`, `POSTDEF`) (requires the bundled YAML plugin)
-- Page layout preview in a split editor pane, drawing estimated PDF pages with line and page breaks, heading sizes, and images from `texdocumentclass` in `config.yml` (`review-jsbook`/`review-jlreq`) and filling in `@<chapref>`, `@<chap>`, `@<title>`, `@<hd>`, `@<list>`, `@<img>`, and `@<table>` references
+- Page layout preview (not strict) in a split editor pane, drawing estimated PDF pages with line and page breaks, heading sizes, and images from `texdocumentclass` in `config.yml` (`review-jsbook`/`review-jlreq`) and filling in `@<chapref>`, `@<chap>`, `@<title>`, `@<hd>`, `@<list>`, `@<img>`, and `@<table>` references
 - Support for `contentdir` and `imagedir` in `config.yml` when locating chapter files listed in `catalog.yml`, `review-ext.rb`, and images

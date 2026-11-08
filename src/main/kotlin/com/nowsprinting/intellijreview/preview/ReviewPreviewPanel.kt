@@ -1,9 +1,7 @@
 package com.nowsprinting.intellijreview.preview
 
 import com.intellij.ui.JBColor
-import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Face
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Figure
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.FootnoteRule
@@ -49,7 +47,47 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
     private fun zoom(settings: ReviewPageSettings): Double =
         ((width - 2 * MARGIN).coerceAtLeast(MIN_PAGE_WIDTH) / settings.paperWidthPt).coerceAtMost(MAX_ZOOM)
 
-    private fun pageTop(index: Int, pageHeight: Double): Double = HEADER_HEIGHT + index * (pageHeight + PAGE_GAP)
+    private fun pageTop(index: Int, pageHeight: Double): Double = MARGIN + index * (pageHeight + PAGE_GAP)
+
+    // ponytail: 版面は紙面の中央に置く。ノド・小口の左右差やhead_space(天)は反映していない
+    private fun areaTop(settings: ReviewPageSettings, zoom: Double): Double = (settings.paperHeightPt - settings.textHeightPt) / 2 * zoom
+
+    // 原稿のoffset以前で最後に置かれた行の、ペイン内の上端のy。先頭の行なら1ページ目の上端が見えるよう0
+    fun yOf(offset: Int): Int? {
+        val content = content ?: return null
+        val settings = content.settings
+        val zoom = zoom(settings)
+        val pageHeight = settings.paperHeightPt * zoom
+        var y = 0.0
+        var first = true
+        content.pages.forEachIndexed { index, page ->
+            for (placed in page) {
+                if (placed.offset < 0) continue
+                if (placed.offset > offset) return y.toInt()
+                y = if (first) 0.0 else pageTop(index, pageHeight) + areaTop(settings, zoom) + placed.y * settings.baselineskipPt * zoom
+                first = false
+            }
+        }
+        return y.toInt()
+    }
+
+    // ペイン内のyに描かれている行の、原稿中の位置。行の途中なら次の行、末尾を過ぎていれば最後の行
+    fun offsetAt(y: Int): Int? {
+        val content = content ?: return null
+        val settings = content.settings
+        val zoom = zoom(settings)
+        val pageHeight = settings.paperHeightPt * zoom
+        var last: Int? = null
+        content.pages.forEachIndexed { index, page ->
+            for (placed in page) {
+                if (placed.offset < 0) continue
+                val bottom = pageTop(index, pageHeight) + areaTop(settings, zoom) + (placed.y + placed.item.height) * settings.baselineskipPt * zoom
+                if (bottom > y) return placed.offset
+                last = placed.offset
+            }
+        }
+        return last
+    }
 
     override fun getPreferredSize(): Dimension {
         val content = content ?: return Dimension(0, 0)
@@ -66,7 +104,6 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
             g2.color = BACKGROUND
             g2.fillRect(0, 0, width, height)
             val content = content ?: return
-            paintHeader(g2, content)
             val settings = content.settings
             val zoom = zoom(settings)
             val pageWidth = settings.paperWidthPt * zoom
@@ -83,17 +120,6 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
         }
     }
 
-    private fun paintHeader(g: Graphics2D, content: Content) {
-        val settings = content.settings
-        val options = if (settings.options.isBlank()) "" else " [${settings.options}]"
-        g.color = UIUtil.getLabelForeground()
-        g.font = JBFont.label()
-        g.drawString(
-            "${settings.documentClass}$options  ${settings.charsPerLine}字 × ${settings.linesPerPage}行  ${content.pages.size}ページ",
-            MARGIN, HEADER_HEIGHT - JBUI.scale(10),
-        )
-    }
-
     private fun paintPage(g: Graphics2D, settings: ReviewPageSettings, page: List<Placed>, number: Int, left: Double, top: Double, zoom: Double) {
         val pageRect = Rectangle2D.Double(left, top, settings.paperWidthPt * zoom, settings.paperHeightPt * zoom)
         g.color = SHADOW
@@ -101,10 +127,9 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
         g.color = Color.WHITE
         g.fill(pageRect)
 
-        // ponytail: 版面は紙面の中央に置く。ノド・小口の左右差やhead_space(天)は反映していない
         val area = Rectangle2D.Double(
             left + (settings.paperWidthPt - settings.textWidthPt) / 2 * zoom,
-            top + (settings.paperHeightPt - settings.textHeightPt) / 2 * zoom,
+            top + areaTop(settings, zoom),
             settings.textWidthPt * zoom,
             settings.textHeightPt * zoom,
         )
@@ -228,7 +253,6 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
 
     companion object {
         private val MARGIN = JBUI.scale(16)
-        private val HEADER_HEIGHT = JBUI.scale(36)
         private val PAGE_GAP = JBUI.scale(16)
         private val MIN_PAGE_WIDTH = JBUI.scale(200)
         private const val MAX_ZOOM = 2.0
