@@ -8,6 +8,7 @@ plugins {
     id("org.jetbrains.changelog")
     id("org.jetbrains.intellij.platform")
     id("org.jetbrains.grammarkit")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -139,5 +140,23 @@ tasks {
     }
     publishPlugin {
         dependsOn(patchChangelog)
+    }
+}
+
+// 生成ディレクトリのファイル一覧から除外リストを作る案は、clean直後の構成時点では生成前で空になるため採らない
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "com.nowsprinting.intellijreview.lexer._ReviewLexer*",
+                    "com.nowsprinting.intellijreview.parser.ReviewParser",
+                    "com.nowsprinting.intellijreview.parser.ReviewParser\$*",
+                    "com.nowsprinting.intellijreview.psi.ReviewTypes*",
+                    "com.nowsprinting.intellijreview.psi.ReviewVisitor",
+                    "com.nowsprinting.intellijreview.psi.impl.*Impl",
+                )
+            }
+        }
     }
 }
