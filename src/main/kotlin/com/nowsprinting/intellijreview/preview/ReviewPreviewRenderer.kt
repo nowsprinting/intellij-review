@@ -9,13 +9,21 @@ import com.nowsprinting.intellijreview.declaration.ReviewBookLayout
 import com.nowsprinting.intellijreview.declaration.ReviewCatalogYamlParser
 import com.nowsprinting.intellijreview.declaration.ReviewConfigYamlParser
 import com.intellij.openapi.vfs.VirtualFile
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.BOLD_END
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.BOLD_START
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Element
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Figure
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Footnote
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Gap
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.NOTE_END
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.NOTE_START
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Padding
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.PageBreak
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Raw
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Space
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Style
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.TT_END
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.TT_START
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Text
 import com.nowsprinting.intellijreview.psi.ReviewBlockBody
 import com.nowsprinting.intellijreview.psi.ReviewTypes
@@ -67,6 +75,7 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         var pendingIsListItem = false
         var afterDefinitionTerm = false
         var noindent = false
+        var inList = false
 
         fun build(): List<Element> {
             var afterComment = false
@@ -74,15 +83,15 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                 val psi = child.psi
                 when {
                     psi is PsiComment -> { afterComment = true; continue }
-                    child.elementType == ReviewTypes.EOL -> if (!afterComment) { flush(); afterDefinitionTerm = false }
+                    child.elementType == ReviewTypes.EOL -> if (!afterComment) { endList(); afterDefinitionTerm = false }
                     child.elementType == ReviewTypes.PARAGRAPH -> paragraph(child)
                     child.elementType == ReviewTypes.LIST_ITEM -> listItem(child)
-                    psi is ReviewHeadingMixin -> { flush(); heading(psi) }
-                    psi is ReviewBlockCommandMixin -> { flush(); block(psi) }
+                    psi is ReviewHeadingMixin -> { endList(); heading(psi) }
+                    psi is ReviewBlockCommandMixin -> { endList(); block(psi) }
                 }
                 afterComment = false
             }
-            flush()
+            endList()
             return elements
         }
 
@@ -90,6 +99,12 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
             if (pending.isNotEmpty()) elements += Text(pending.toString(), pendingFirstIndent, pendingHangIndent)
             pending.setLength(0)
             pendingIsListItem = false
+        }
+
+        fun endList() {
+            flush()
+            if (inList) elements += Gap(0.5)
+            inList = false
         }
 
         fun start(text: String, firstIndent: Int, hangIndent: Int, isListItem: Boolean) {
@@ -102,7 +117,8 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         // Re:VIEWは空行までの連続した行を1段落に連結する。和文同士は改行を詰め、欧文同士は空白1つにする
         // (TeXが和文文字の前後の改行を無視するのと同じ結果)。
         fun append(text: String) {
-            if (pending.isNotEmpty() && pending.last() in '!'..'~' && text.firstOrNull() in '!'..'~') pending.append(' ')
+            val last = pending.lastOrNull { !ReviewPageLayout.isMarker(it) }
+            if (last in '!'..'~' && text.firstOrNull { !ReviewPageLayout.isMarker(it) } in '!'..'~') pending.append(' ')
             pending.append(text)
         }
 
@@ -114,15 +130,18 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                 indented && afterDefinitionTerm -> start(text.trim(), 2, 2, true)
                 pending.isNotEmpty() && !pendingIsListItem -> append(text.trim())
                 else -> {
-                    flush()
+                    endList()
                     start(text.trim(), if (noindent) 0 else 1, 0, false)
                     noindent = false
                 }
             }
         }
 
+        // jsbook.clsの\@listi: 箇条書きの前後に\topsep(0.5行)のアキ。入れ子の箇条書きは\topsepが0
         fun listItem(node: ASTNode) {
             flush()
+            if (!inList) elements += Gap(0.5)
+            inList = true
             afterDefinitionTerm = false
             val marker = node.firstChildNode
             val text = lineText(node).trim()
@@ -186,9 +205,12 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                     elements += Gap(0.5)
                     if (!caption.isNullOrBlank()) elements += Text(caption, style = Style.CAPTION)
                     val numbered = name.endsWith("num")
+                    val padding = Padding(FRAME_SEP_PT / settings.baselineskipPt)
+                    elements += padding
                     bodyLines(block).forEachIndexed { i, line ->
                         elements += Raw(if (numbered) "${(i + 1).toString().padStart(2)}: $line" else line, Style.CODE)
                     }
+                    elements += padding
                     elements += Gap(0.5)
                 }
                 in IMAGE_BLOCKS -> {
@@ -196,14 +218,14 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                     val caption = args.getOrElse(if (name == "graph") 2 else 1) { "" }
                     val label = if (name in NUMBERED_GROUP) "${itemLabel(block)}: $caption" else caption
                     elements += Gap(0.5)
-                    if (name == "imgtable") elements += Text(label, style = Style.CAPTION)
+                    if (name == "imgtable") elements += Text(label, style = Style.FLOAT_CAPTION)
                     elements += figure(args.getOrElse(0) { "" }, if (name == "graph") null else args.getOrNull(2))
-                    if (name != "imgtable" && label.isNotBlank()) elements += Text(label, style = Style.CAPTION)
+                    if (name != "imgtable" && label.isNotBlank()) elements += Text(label, style = Style.FLOAT_CAPTION)
                     elements += Gap(0.5)
                 }
                 "table" -> {
                     elements += Gap(0.5)
-                    elements += Text("${itemLabel(block)}: ${args.getOrElse(1) { "" }}", style = Style.CAPTION)
+                    elements += Text("${itemLabel(block)}: ${args.getOrElse(1) { "" }}", style = Style.FLOAT_CAPTION)
                     bodyLines(block).filterNot { TABLE_SEPARATOR.matches(it) }
                         .forEach { elements += Raw(it.split(Regex("\t+")).joinToString(" │ ")) }
                     elements += Gap(0.5)
@@ -211,6 +233,7 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
                 "noindent" -> noindent = true
                 "blankline" -> elements += Space(1.0)
                 "pagebreak", "clearpage" -> elements += PageBreak
+                "footnote" -> elements += Footnote(footnoteMark(block), args.getOrElse(1) { "" })
                 in SKIPPED_BLOCKS -> Unit
                 else -> {
                     // note・memo・quoteなどの囲み: 本文は段落として組み、全角1字ぶん内側に寄せる
@@ -331,11 +354,15 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
             }
             "fn" -> {
                 val target = command.references.lastOrNull()?.resolve() as? ReviewBlockCommandMixin
-                "*" + (target?.let { footnoteNumber(it) } ?: "?")
+                "$NOTE_START${target?.let { footnoteMark(it) } ?: "*?"}$NOTE_END"
             }
             "br" -> "\n"
             "ruby" -> content.substringBefore(',')
-            "kw" -> if (content.contains(',')) "${content.substringBefore(',')}（${content.substringAfter(',').trim()}）" else content
+            // review-base.styの\reviewkwは太字(\textbf\textgt)。読みは太字にしない
+            "kw" -> if (content.contains(',')) "$BOLD_START${content.substringBefore(',')}$BOLD_END（${content.substringAfter(',').trim()}）"
+            else "$BOLD_START$content$BOLD_END"
+            "b", "strong" -> "$BOLD_START$content$BOLD_END"
+            "tt", "code", "ttb", "tti" -> "$TT_START$content$TT_END"
             "href" -> if (content.contains(',')) content.substringAfter(',').trim() else content
             "uchar" -> content.toIntOrNull(16)?.let { String(Character.toChars(it)) } ?: ""
             "comment", "hidx", "raw", "embed" -> ""
@@ -382,8 +409,9 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         return group + if (prefix != null) "$prefix.$n" else "$n"
     }
 
-    private fun footnoteNumber(block: ReviewBlockCommandMixin): Int =
-        PsiTreeUtil.findChildrenOfType(block.containingFile, ReviewBlockCommandMixin::class.java)
+    // jsbook.clsの\thefootnoteは"*1"のような番号
+    private fun footnoteMark(block: ReviewBlockCommandMixin): String =
+        "*" + PsiTreeUtil.findChildrenOfType(block.containingFile, ReviewBlockCommandMixin::class.java)
             .count { it.getCommandName() == block.getCommandName() && it.textOffset <= block.textOffset }
 
     companion object {
@@ -404,9 +432,11 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         private val CODE_BLOCKS = setOf("list", "listnum", "emlist", "emlistnum", "source", "cmd", "box", "texequation")
         private val IMAGE_BLOCKS = setOf("image", "indepimage", "numberlessimage", "graph", "imgtable")
 
-        // ponytail: 脚注はページ下部に組まれるが、本文の行数には含めていない
+        // framed.styの\FrameSep(3\fboxsep)。shadedの網掛けは本文の上下と左右の版面外にこれだけ広がる
+        const val FRAME_SEP_PT = 9.0
+
         private val SKIPPED_BLOCKS = setOf(
-            "footnote", "endnote", "bibpaper", "comment", "label", "tsize", "latextsize", "raw", "embed",
+            "endnote", "bibpaper", "comment", "label", "tsize", "latextsize", "raw", "embed",
             "printendnotes", "beginchild", "endchild", "firstlinenum", "olnum",
         )
         private val UNNUMBERED_OPTIONS = setOf("nonum", "notoc", "nodisp")

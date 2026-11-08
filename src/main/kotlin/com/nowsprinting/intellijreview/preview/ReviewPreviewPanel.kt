@@ -4,8 +4,11 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Face
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Figure
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.FootnoteRule
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Line
+import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Padding
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Placed
 import com.nowsprinting.intellijreview.preview.ReviewPageLayout.Style
 import java.awt.BasicStroke
@@ -110,9 +113,17 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
         g.draw(area)
 
         for (placed in page) {
+            val y = area.y + placed.y * settings.baselineskipPt * zoom
             when (val item = placed.item) {
-                is Line -> paintLine(g, settings, item, area, area.y + placed.y * settings.baselineskipPt * zoom, zoom)
-                is Figure -> paintFigure(g, settings, item, area, area.y + placed.y * settings.baselineskipPt * zoom, zoom)
+                is Line -> paintLine(g, settings, item, area, y, zoom)
+                is Figure -> paintFigure(g, settings, item, area, y, zoom)
+                is Padding -> paintCodeBackground(g, settings, area, y, item.height * settings.baselineskipPt * zoom, zoom)
+                FootnoteRule -> {
+                    // jsbook.clsの\footnoterule: 版面の幅の0.4倍
+                    g.color = Color.BLACK
+                    g.stroke = BasicStroke((0.4 * settings.fontScale * zoom).toFloat().coerceAtLeast(1f))
+                    g.draw(Line2D.Double(area.x, y, area.x + area.width * 0.4, y))
+                }
             }
         }
 
@@ -124,45 +135,62 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
         g.drawString(folio, (pageRect.centerX - folioWidth / 2).toFloat(), (area.maxY + bottomMargin / 2).toFloat())
     }
 
+    // framed.styのshadedは、網掛けを版面の左右に\FrameSepだけはみ出させる
+    private fun paintCodeBackground(g: Graphics2D, settings: ReviewPageSettings, area: Rectangle2D.Double, y: Double, height: Double, zoom: Double) {
+        val sep = ReviewPreviewRenderer.FRAME_SEP_PT * zoom
+        g.color = CODE_BACKGROUND
+        g.fill(Rectangle2D.Double(area.x - sep, y, area.width + 2 * sep, height))
+    }
+
     private fun paintLine(g: Graphics2D, settings: ReviewPageSettings, line: Line, area: Rectangle2D.Double, y: Double, zoom: Double) {
         val height = line.height * settings.baselineskipPt * zoom
-        if (line.style == Style.CODE) {
-            g.color = CODE_BACKGROUND
-            g.fill(Rectangle2D.Double(area.x, y, area.width, height))
-        }
+        if (line.style == Style.CODE) paintCodeBackground(g, settings, area, y, height, zoom)
+        // 字送りは行分割の計算に使った字幅(和文は1zw、欧文はLatin Modernの字幅)のとおりにする。
+        // 描画に使うフォントの欧文字幅はLatin Modernと合わないため、欧文の連なりごとに横方向だけ伸縮させる。
         val em = settings.zwPt * line.style.scale * zoom
-        g.font = Font(fontFamily(line.style), if (line.style.bold) Font.BOLD else Font.PLAIN, 1).deriveFont(em.toFloat())
-        g.color = if (line.style == Style.CAPTION) CAPTION_COLOR else Color.BLACK
-        // 字送りを行分割の計算(全角=1zw、半角=0.5zw)と揃え、版面のどこで折り返したかを見たとおりにする。
-        // 半角の連なりを1文字ずつ0.5zwに置くと欧文フォントの字幅と合わず重なるため、連なりごとに横方向だけ伸縮させる。
+        val lineWidth = line.width * em
+        val centered = line.style == Style.FLOAT_CAPTION
         val baseline = y + height / 2 + em * 0.38
-        val text = line.text
-        var x = area.x
-        var start = 0
-        while (start < text.length) {
-            val halfWidth = ReviewPageLayout.width(text[start]) == 1
-            var end = start + 1
-            if (halfWidth) while (end < text.length && ReviewPageLayout.width(text[end]) == 1) end++
-            val run = text.substring(start, end)
-            val runWidth = ReviewPageLayout.width(run) * em / 2
-            val naturalWidth = g.fontMetrics.getStringBounds(run, g).width
-            if (halfWidth && naturalWidth > 0) {
-                val saved = g.transform
-                g.translate(x, baseline)
-                g.scale(runWidth / naturalWidth, 1.0)
-                g.drawString(run, 0f, 0f)
-                g.transform = saved
-            } else {
-                g.drawString(run, x.toFloat(), baseline.toFloat())
-            }
-            x += runWidth
-            start = end
+        var x = if (centered) area.x + (area.width - lineWidth) / 2 else area.x + line.indent * em
+        g.color = if (line.style == Style.CAPTION || line.style == Style.FLOAT_CAPTION) CAPTION_COLOR else Color.BLACK
+        for (token in line.tokens) {
+            val tokenWidth = token.width * em
+            if (!token.glue && token.text.isNotBlank()) paintToken(g, settings, line.style, token, x, baseline, tokenWidth, em)
+            x += tokenWidth
         }
-        if (x > area.maxX + 0.5) {
+        if (!centered && area.x + lineWidth > area.maxX + 0.5) {
             // 折り返さないコードや表の行が版面からはみ出していることを示す
             g.color = OVERFLOW_MARK
             g.stroke = BasicStroke(2f)
             g.draw(Line2D.Double(area.maxX + 2, y, area.maxX + 2, y + height))
+        }
+    }
+
+    private fun paintToken(g: Graphics2D, settings: ReviewPageSettings, style: Style, token: ReviewPageLayout.Token, x: Double, baseline: Double, width: Double, em: Double) {
+        val latin = token.text[0] in ' '..'~'
+        // \reviewkwは和文をゴシック(\textgt)、欧文をボールド(\textbf)にする
+        val family = when {
+            token.face == Face.TT || style == Style.CODE -> Font.MONOSPACED
+            token.face == Face.BOLD -> if (latin) Font.SERIF else Font.SANS_SERIF
+            else -> fontFamily(style)
+        }
+        val bold = style.bold || token.face == Face.BOLD
+        val latinEm = if (latin) em * settings.latinEmPt / settings.zwPt else em
+        val size = if (token.face == Face.NOTE_MARK) latinEm * ReviewPageLayout.SUPERSCRIPT_SCALE else latinEm
+        g.font = Font(family, if (bold) Font.BOLD else Font.PLAIN, 1).deriveFont(size.toFloat())
+        val y = if (token.face == Face.NOTE_MARK) baseline - em * 0.35 else baseline
+        if (latin) {
+            val naturalWidth = g.fontMetrics.getStringBounds(token.text, g).width
+            if (naturalWidth <= 0) return
+            val saved = g.transform
+            g.translate(x, y)
+            g.scale(width / naturalWidth, 1.0)
+            g.drawString(token.text, 0f, 0f)
+            g.transform = saved
+        } else {
+            // 詰められた開き括弧は、字面が全角の右半分にあるため半角ぶん左から描く
+            val shift = if (token.width < 1.0 && token.text[0] in ReviewPageLayout.OPENING) em / 2 else 0.0
+            g.drawString(token.text, (x - shift).toFloat(), y.toFloat())
         }
     }
 
@@ -186,7 +214,7 @@ class ReviewPreviewPanel : JComponent(), Scrollable {
 
     // jsbook.clsは本文を明朝、見出しをゴシック(\headfont)で組む
     private fun fontFamily(style: Style): String = when (style) {
-        Style.BODY, Style.CAPTION -> Font.SERIF
+        Style.BODY, Style.CAPTION, Style.FLOAT_CAPTION, Style.FOOTNOTE -> Font.SERIF
         Style.CODE -> Font.MONOSPACED
         else -> Font.SANS_SERIF
     }

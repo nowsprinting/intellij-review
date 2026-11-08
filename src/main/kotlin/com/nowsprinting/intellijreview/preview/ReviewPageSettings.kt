@@ -18,9 +18,17 @@ data class ReviewPageSettings(
     val paperHeightPt: Double,
     val zwPt: Double,
     val baselineskipPt: Double,
+    // 欧文フォントの1em。jsbook.clsは和文を\Cjascale倍に縮めるため、zwより大きい
+    val latinEmPt: Double,
 ) {
     val textWidthPt: Double get() = charsPerLine * zwPt
     val textHeightPt: Double get() = linesPerPage * baselineskipPt
+
+    // 10pt組みに対する文字サイズの比。クラスファイルが10pt基準で定める寸法(\footnotesizeの行送りなど)に掛ける
+    val fontScale: Double get() = latinEmPt / 10
+
+    // openany指定が無ければ章は奇数ページから始まる(jsbook.cls・jlreq.clsとも既定はopenright)
+    val openAny: Boolean get() = options.split(',').any { it.trim() == "openany" }
 
     companion object {
         // texdocumentclass未指定時のRe:VIEW既定値(lib/review/configure.rb)
@@ -109,7 +117,7 @@ data class ReviewPageSettings(
                 val body = 0.83 * paperHeight - 10 * scale - headsep - footskip - topskip
                 floor(body / baselineskip).toInt() + 1
             }
-            return ReviewPageSettings("", "", chars, lines, paperWidth, paperHeight, zw, baselineskip)
+            return ReviewPageSettings("", "", chars, lines, paperWidth, paperHeight, zw, baselineskip, 10.0 * scale)
         }
 
         // ponytail: jlreqの既定版面は「紙面の0.75倍」で近似。jlreq本体の細かな丸めは追っていない
@@ -123,7 +131,7 @@ data class ReviewPageSettings(
                 ?: floor(0.75 * paperWidth / zw).toInt()
             val lines = options["number_of_lines"]?.toIntOrNull()
                 ?: (floor((0.75 * paperHeight - zw) / baselineskip).toInt() + 1)
-            return ReviewPageSettings("", "", chars, lines, paperWidth, paperHeight, zw, baselineskip)
+            return ReviewPageSettings("", "", chars, lines, paperWidth, paperHeight, zw, baselineskip, zw)
         }
 
         private fun paperPt(options: Map<String, String>, papers: Map<String, Pair<Double, Double>>, default: String): Pair<Double, Double> {

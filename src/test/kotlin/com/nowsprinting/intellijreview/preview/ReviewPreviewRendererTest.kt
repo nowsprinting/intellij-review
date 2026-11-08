@@ -23,8 +23,10 @@ class ReviewPreviewRendererTest : BasePlatformTestCase() {
         runWriteAction { file.setBinaryContent(bytes.toByteArray()) }
     }
 
-    private fun setUpBook(options: String) {
-        myFixture.addFileToProject("config.yml", "texdocumentclass: [\"review-jsbook\", \"$options\"]\n")
+    // openanyを付けないと章末に白ページが入るため、ページ数を問わないテストではopenanyを付ける
+    private fun setUpBook(options: String, openany: Boolean = true) {
+        val documentOptions = if (openany) "openany,$options" else options
+        myFixture.addFileToProject("config.yml", "texdocumentclass: [\"review-jsbook\", \"$documentOptions\"]\n")
         myFixture.addFileToProject("catalog.yml", "PREDEF:\n  - pre.re\nCHAPS:\n  - ch01.re\n  - ch02.re\nAPPENDIX:\n  - app.re\n")
         myFixture.addFileToProject("ch01.re", "= はじめに\n\n//list[hello][挨拶]{\nputs 1\n//}\n")
         myFixture.addFileToProject("app.re", "= 補足\n")
@@ -47,12 +49,96 @@ class ReviewPreviewRendererTest : BasePlatformTestCase() {
         assertEquals(listOf(listOf("　あ", "　い"), listOf("　う")), result)
     }
 
-    fun test行頭禁則文字は前の行にぶら下がる() {
+    fun test行頭禁則文字は直前の文字と一緒に次の行へ追い出される() {
         setUpBook("line_length=5zw,number_of_lines=30")
 
         val lines = pages("//noindent\nあいうえお。かき\n").single()
 
-        assertEquals(listOf("あいうえお。", "かき"), lines)
+        assertEquals(listOf("あいうえ", "お。かき"), lines)
+    }
+
+    fun test小書きの仮名は行頭に置ける() {
+        setUpBook("line_length=5zw,number_of_lines=30")
+
+        val lines = pages("//noindent\nあいうえおョか\n").single()
+
+        assertEquals(listOf("あいうえお", "ョか"), lines)
+    }
+
+    // 「はじめに」のPDF出力(9pt・38字)の行分割。欧文の字幅・和欧間のアキ・脚注番号の幅で字数が変わる
+    fun test和欧間のアキと欧文の字幅と脚注番号の幅を数えてPDFと同じ位置で折り返す() {
+        setUpBook("fontsize=9pt,baselineskip=13pt,line_length=38zw,number_of_lines=37")
+
+        val lines = placedPages(
+            "映画『キングスマン』でも引用され、「礼節が人を作る」と訳されました@<fn>{a}。\n" +
+                "コーディングエージェントを使うソフトウェア開発では、スキルによってエージェントに礼節を身につけさせることで安心して仕事を任せられるようになります。\n" +
+                "エージェントの礼節とは、テストコードで振る舞いを検証し、リグレッション@<fn>{b}を防ぎ、静的解析で内部品質@<fn>{c}を高く保つプラクティスです。\n" +
+                "\n第1章・第3章はUnity向けの内容ですが、中心はテスト設計やワークフローであり、他のプラットフォームにもほぼそのまま適用できるはずです。\n" +
+                "\n//footnote[a][あ]\n//footnote[b][い]\n//footnote[c][う]\n",
+        ).single().mapNotNull { it.item as? Line }.filter { it.style == ReviewPageLayout.Style.BODY }.map { it.text }
+
+        assertEquals(
+            listOf(
+                "　映画『キングスマン』でも引用され、「礼節が人を作る」と訳されました*1。コー",
+                "ディングエージェントを使うソフトウェア開発では、スキルによってエージェントに",
+                "礼節を身につけさせることで安心して仕事を任せられるようになります。エージェン",
+                "トの礼節とは、テストコードで振る舞いを検証し、リグレッション*2を防ぎ、静的解",
+                "析で内部品質*3を高く保つプラクティスです。",
+                "　第1章・第3章はUnity向けの内容ですが、中心はテスト設計やワークフローで",
+                "あり、他のプラットフォームにもほぼそのまま適用できるはずです。",
+            ),
+            lines,
+        )
+    }
+
+    fun test箇条書きの前後には半行のアキが入る() {
+        setUpBook("line_length=40zw,number_of_lines=30")
+
+        val page = placedPages("//noindent\nあ\n\n * い\n ** う\n * え\n\n 1. お\n 2. か\n\n//noindent\nき\n").single()
+
+        assertEquals(
+            listOf(0.0 to "あ", 1.5 to "・い", 2.5 to "　・う", 3.5 to "・え", 5.0 to "　1. お", 6.0 to "　2. か", 7.5 to "き"),
+            page.map { it.y to (it.item as Line).text },
+        )
+    }
+
+    fun testキーワードは太字の字幅で数える() {
+        setUpBook("line_length=4zw,number_of_lines=30")
+
+        val plain = pages("//noindent\nmmmあ\n").single()
+        val keyword = pages("//noindent\n@<kw>{mmm}あ\n").single()
+
+        assertEquals(listOf("mmmあ"), plain)
+        assertEquals(listOf("mmm", "あ"), keyword)
+    }
+
+    fun test脚注は参照した行と同じページの下部に組まれその高さだけ本文の行数が減る() {
+        setUpBook("line_length=40zw,number_of_lines=5")
+
+        // 脚注1行ぶんの高さは、本文の後のアキ16ptと脚注の行送り11ptで、本文の行送り16ptの1.69行
+        val result = placedPages("あ@<fn>{n}\n\nい\n\nう\n\nえ\n\nお\n\n//footnote[n][注]\n")
+
+        val firstPage = result[0].mapNotNull { it.item as? Line }
+        assertEquals(listOf("　あ*1", "　い", "　う"), firstPage.filter { it.style == ReviewPageLayout.Style.BODY }.map { it.text })
+        assertEquals(listOf("*1", "注"), firstPage.filter { it.style == ReviewPageLayout.Style.FOOTNOTE }.map { it.text })
+        assertTrue(result[0].any { it.item == ReviewPageLayout.FootnoteRule })
+    }
+
+    fun testopenanyが無ければ奇数ページで終わる章の後に白ページが入る() {
+        setUpBook("line_length=40zw,number_of_lines=30", openany = false)
+
+        val result = placedPages("= 本題\n\nあ\n")
+
+        assertEquals(2, result.size)
+        assertTrue(result[1].isEmpty())
+    }
+
+    fun test図のキャプションは中央揃えの書式になる() {
+        setUpBook("line_length=40zw,number_of_lines=30")
+
+        val caption = placedPages("//image[none][図]\n").single().firstNotNullOf { it.item as? Line }
+
+        assertEquals(ReviewPageLayout.Style.FLOAT_CAPTION, caption.style)
     }
 
     fun test英単語は途中で分割されない() {
