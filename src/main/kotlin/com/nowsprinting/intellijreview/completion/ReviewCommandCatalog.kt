@@ -12,12 +12,12 @@ import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
 // 近似値である(Open questionsに記載。将来の精査・修正を妨げないようdataとlogicを分離した)。
 object ReviewCommandCatalog {
 
-    private const val ID_CAPTION_BODY = "[][]{\n\n//}"
-    private const val ID_BODY = "[]{\n\n//}"
+    private const val ID_CAPTION_BODY = "[][]{\n//}"
+    private const val ID_BODY = "[]{\n//}"
     private const val ID_CONTENT_BRACKETS = "[][]"
     private const val RAW_BUILDER_CONTENT = "[|]"
-    private const val CAPTION_BODY = "[]{\n\n//}"
-    private const val BODY_ONLY = "{\n\n//}"
+    private const val CAPTION_BODY = "[]{\n//}"
+    private const val BODY_ONLY = "{\n//}"
     private const val ID_ONLY = "[]"
     private const val NO_ARGS = ""
 

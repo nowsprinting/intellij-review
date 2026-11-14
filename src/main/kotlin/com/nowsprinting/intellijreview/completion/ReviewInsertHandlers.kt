@@ -4,16 +4,14 @@ import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.lookup.LookupElement
 
-// テンプレート中で最初に現れる"["か"{"の直後(波括弧の場合は直後の改行も飛ばす)に
-// キャレットを置く。プレースホルダ専用の記法は導入せず、テンプレートの構造から
-// 機械的に決定できるようにした(シンプルさを優先)。
+// テンプレート中で最初に現れる"["か"{"の直後にキャレットを置く。プレースホルダ専用の記法は
+// 導入せず、テンプレートの構造から機械的に決定できるようにした(シンプルさを優先)。
+// 本文テンプレートは空行を持たないため、"{"直後の改行を飛ばすと"//}"の行頭に入ってしまう。
 private fun caretOffsetWithin(template: String): Int {
     val bracket = template.indexOf('[')
     if (bracket >= 0) return bracket + 1
     val brace = template.indexOf('{')
-    if (brace >= 0) {
-        return if (template.getOrNull(brace + 1) == '\n') brace + 2 else brace + 1
-    }
+    if (brace >= 0) return brace + 1
     return template.length
 }
 

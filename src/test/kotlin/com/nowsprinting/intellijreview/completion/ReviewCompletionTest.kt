@@ -16,7 +16,7 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         myFixture.configureByText("a.re", "//<caret>\n")
         myFixture.completeBasic()
         myFixture.type("list\n")
-        myFixture.checkResult("//list[<caret>][]{\n\n//}\n")
+        myFixture.checkResult("//list[<caret>][]{\n//}\n")
     }
 
     fun testインライン名を補完できる() {
@@ -46,15 +46,15 @@ class ReviewCompletionTest : BasePlatformTestCase() {
     }
 
     fun testreview_ext_rbでdefblockされた命令は引数の数に応じた括弧と本文付きで補完される() {
-        assertEquals("//myblock[<caret>]{\n\n//}\n", completeBlockWithExt("myblock"))
+        assertEquals("//myblock[<caret>]{\n//}\n", completeBlockWithExt("myblock"))
     }
 
     fun testreview_ext_rbでdefblockされた命令は最小引数の数だけ括弧が入る() {
-        assertEquals("//myargs[<caret>][]{\n\n//}\n", completeBlockWithExt("myargs"))
+        assertEquals("//myargs[<caret>][]{\n//}\n", completeBlockWithExt("myargs"))
     }
 
     fun testreview_ext_rbで引数なしでdefblockされた命令は本文だけが入る() {
-        assertEquals("//mynoargs{\n<caret>\n//}\n", completeBlockWithExt("mynoargs"))
+        assertEquals("//mynoargs{<caret>\n//}\n", completeBlockWithExt("mynoargs"))
     }
 
     fun testreview_ext_rbでdefsingleされた命令は本文なしで補完される() {
@@ -62,7 +62,7 @@ class ReviewCompletionTest : BasePlatformTestCase() {
     }
 
     fun testreview_ext_rbでdefminicolumnされた命令はキャプションと本文付きで補完される() {
-        assertEquals("//mycolumn[<caret>]{\n\n//}\n", completeBlockWithExt("mycolumn"))
+        assertEquals("//mycolumn[<caret>]{\n//}\n", completeBlockWithExt("mycolumn"))
     }
 
     fun testreview_ext_rbでdefinlineされたユーザー命令もインライン名の候補に出る() {
