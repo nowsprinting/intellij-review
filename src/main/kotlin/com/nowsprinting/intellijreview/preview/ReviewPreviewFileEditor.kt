@@ -13,6 +13,7 @@ import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.TextEditorWithPreview
 import com.intellij.openapi.fileEditor.TextEditorWithPreviewProvider
+import com.intellij.openapi.fileEditor.impl.text.QuickDefinitionProvider
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
@@ -145,7 +146,9 @@ class ReviewPreviewFileEditorProvider : FileEditorProvider, DumbAware {
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.PLACE_AFTER_DEFAULT_EDITOR
 }
 
-class ReviewSplitEditorProvider : TextEditorWithPreviewProvider(ReviewPreviewFileEditorProvider()), DumbAware {
+// HIDE_DEFAULT_EDITORにより既定テキストエディタのプロバイダが隠れるため、QuickDefinitionProviderを
+// 実装しないとQuick Definition(Cmd+Y)が分割エディタ全体を埋め込み、定義箇所ではなくファイル先頭を表示する。
+class ReviewSplitEditorProvider : TextEditorWithPreviewProvider(ReviewPreviewFileEditorProvider()), QuickDefinitionProvider, DumbAware {
     override fun createSplitEditor(firstEditor: TextEditor, secondEditor: FileEditor): FileEditor {
         (secondEditor as ReviewPreviewFileEditor).followScrolling(firstEditor.editor)
         return TextEditorWithPreview(firstEditor, secondEditor, ReviewBundle.message("preview.splitEditorName"))
