@@ -38,6 +38,8 @@
                                   implementationClass="com.nowsprinting.intellijreview.rename.ReviewInlineCommandManipulator"/>
         <lang.findUsagesProvider language="ReVIEW"
                                   implementationClass="com.nowsprinting.intellijreview.usages.ReviewFindUsagesProvider"/>
+        <targetElementEvaluator language="ReVIEW"
+                                implementationClass="com.nowsprinting.intellijreview.usages.ReviewTargetElementEvaluator"/>
         <lang.refactoringSupport language="ReVIEW"
                                   implementationClass="com.nowsprinting.intellijreview.rename.ReviewRefactoringSupportProvider"/>
         <lang.psiStructureViewFactory language="ReVIEW"

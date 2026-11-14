@@ -1,8 +1,10 @@
 package com.nowsprinting.intellijreview.usages
 
+import com.intellij.lang.cacheBuilder.VersionedWordsScanner
 import com.intellij.lang.cacheBuilder.WordOccurrence
 import com.intellij.lang.cacheBuilder.WordsScanner
 import com.intellij.lang.findUsages.FindUsagesProvider
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.util.Processor
@@ -12,35 +14,32 @@ import com.nowsprinting.intellijreview.psi.impl.ReviewBlockCommandMixin
 import com.nowsprinting.intellijreview.psi.impl.ReviewHeadingMixin
 
 class ReviewFindUsagesProvider : FindUsagesProvider {
-    // 計画書は当初DefaultWordsScannerを想定していたが、実測で2つの問題を確認し自前実装に
-    // 切り替えた(advisorレビューで指摘された懸念が実際に的中した)。
-    // (1) DefaultWordsScannerの識別子境界分割は、ハイフン入りIDの完全一致ワードを
-    //     検索インデックスに載せられない。
-    // (2) 分割を一切せずトークン全体を1ワードにする案も試したが、"chapterId|id"の
-    //     ような章跨ぎ記法では"id"だけの完全一致検索(ReferencesSearchは対象要素の
-    //     名前=完全一致ワードでインデックスを引く)がヒットしなくなり、むしろ悪化した。
-    // 最終的に、"|"(章跨ぎの区切り文字。このプロジェクト自身の文法上の意味を持つ既知の
-    // 区切り)でのみ分割し、それ以外の文字(ハイフン・アンダースコア等)では分割しない
-    // 自前のWordsScannerとした。
-    override fun getWordsScanner(): WordsScanner = WordsScanner { fileText, processor ->
-        val lexer = ReviewLexerAdapter()
-        lexer.start(fileText)
-        while (lexer.tokenType != null) {
-            if (lexer.tokenType in INDEXED_TOKENS) {
-                val tokenStart = lexer.tokenStart
-                val tokenEnd = lexer.tokenEnd
-                var segmentStart = tokenStart
-                for (offset in tokenStart..tokenEnd) {
-                    if (offset == tokenEnd || fileText[offset] == '|') {
-                        if (offset > segmentStart) {
-                            val occurrence = WordOccurrence(fileText, segmentStart, offset, WordOccurrence.Kind.CODE)
-                            if (!processor.process(occurrence)) return@WordsScanner
-                        }
-                        segmentStart = offset + 1
+    // 検索側(PsiSearchHelperImpl)は検索語をStringUtil.getWordsIn(isJavaIdentifierPart境界)で
+    // 分割し、全ワードを含むファイルをインデックスで引く。ハイフン入りIDやスペース入り
+    // キャプションをトークン丸ごと1ワードで登録すると他ファイルの被リンクを取りこぼすため、
+    // 同じ境界で分割して登録する。DefaultWordsScannerを使わないのは、本文テキストまで
+    // 索引化してしまうため(INDEXED_TOKENSのみに絞る)。
+    // 素のWordsScannerだとIdIndexのバージョンが固定(-1)になり、分割規則を変えても既存の
+    // インデックスが再構築されず、開いていないファイルの被リンクを取りこぼす。分割規則を
+    // 変えたらgetVersion()を上げること。
+    override fun getWordsScanner(): WordsScanner = object : VersionedWordsScanner() {
+        override fun getVersion(): Int = 2
+
+        override fun processWords(fileText: CharSequence, processor: Processor<in WordOccurrence>) {
+            val lexer = ReviewLexerAdapter()
+            lexer.start(fileText)
+            while (lexer.tokenType != null) {
+                if (lexer.tokenType in INDEXED_TOKENS) {
+                    val tokenStart = lexer.tokenStart
+                    for (word in StringUtil.getWordIndicesIn(fileText.substring(tokenStart, lexer.tokenEnd))) {
+                        val occurrence = WordOccurrence(
+                            fileText, tokenStart + word.startOffset, tokenStart + word.endOffset, WordOccurrence.Kind.CODE
+                        )
+                        if (!processor.process(occurrence)) return
                     }
                 }
+                lexer.advance()
             }
-            lexer.advance()
         }
     }
 
@@ -58,7 +57,7 @@ class ReviewFindUsagesProvider : FindUsagesProvider {
 
     override fun getDescriptiveName(element: PsiElement): String = when (element) {
         is ReviewBlockCommandMixin -> element.getIdArg() ?: ""
-        is ReviewHeadingMixin -> element.getLabel() ?: ""
+        is ReviewHeadingMixin -> element.name
         is PsiFile -> element.name
         else -> ""
     }

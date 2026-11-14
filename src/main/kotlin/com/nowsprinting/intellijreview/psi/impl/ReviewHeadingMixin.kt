@@ -5,6 +5,7 @@ import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiNameIdentifierOwner
 import com.intellij.util.IncorrectOperationException
+import com.nowsprinting.intellijreview.declaration.ReviewDeclarationCache
 import com.nowsprinting.intellijreview.psi.ReviewElementFactory
 import com.nowsprinting.intellijreview.psi.ReviewTypes
 
@@ -32,7 +33,9 @@ abstract class ReviewHeadingMixin(node: ASTNode) : ASTWrapperPsiElement(node), P
     // Shift+F6が宣言位置から効かなくなる。ラベル葉の開始位置を返すよう上書きする。
     override fun getTextOffset(): Int = nameIdentifier?.textRange?.startOffset ?: super.getTextOffset()
 
-    override fun getName(): String? = getLabel()
+    // @<hd>系はラベルが無ければ正規化キャプションで照合する(ReviewDeclarationCache参照)ため、
+    // Find Usagesの検索語もそれに揃える。リネームはgetNameIdentifier()==nullで拒否されたまま。
+    override fun getName(): String = getLabel() ?: ReviewDeclarationCache.normalizeCaption(this)
 
     // ラベルの無い見出し(キャプションのみ)はリネームできない(計画書の要求どおり)。
     // ElementManipulator経由ではなく葉トークンを直接差し替える(専用マニピュレータは持たない)。
