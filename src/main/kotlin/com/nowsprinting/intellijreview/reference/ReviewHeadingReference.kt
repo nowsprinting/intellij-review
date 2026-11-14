@@ -3,6 +3,7 @@ package com.nowsprinting.intellijreview.reference
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.PsiReferenceBase
 import com.nowsprinting.intellijreview.declaration.ReviewDeclaration
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationCache
@@ -18,7 +19,7 @@ import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
 class ReviewHeadingReference(
     element: PsiElement,
     range: TextRange,
-    private val rawId: String,
+    val rawId: String,
     private val kind: ReviewDeclarationKind,
 ) : PsiReferenceBase<PsiElement>(element, range) {
 
@@ -34,6 +35,17 @@ class ReviewHeadingReference(
             }
         }
         return find(ReviewDeclarationCache.byKind(project, kind), element.containingFile, rawId)?.element
+    }
+
+    // 既定実装は範囲全体(rawId)を新しい名前で置き換えるため、"Sec|Sub"や"chapId|Sub"の
+    // ネストパス・章IDが失われる。リネーム対象(見出し自身の名前)のセグメントだけを差し替える。
+    override fun handleElementRename(newElementName: String): PsiElement {
+        val oldName = (resolve() as? PsiNamedElement)?.name
+        val segments = rawId.split('|').toMutableList()
+        val index = segments.lastIndexOf(oldName)
+        if (index < 0) return super.handleElementRename(newElementName)
+        segments[index] = newElementName
+        return super.handleElementRename(segments.joinToString("|"))
     }
 
     companion object {

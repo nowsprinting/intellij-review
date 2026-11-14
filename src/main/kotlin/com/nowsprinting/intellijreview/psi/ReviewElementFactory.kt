@@ -21,6 +21,9 @@ object ReviewElementFactory {
     fun createInlineCommand(project: Project, text: String): ReviewInlineCommandMixin =
         PsiTreeUtil.findChildOfType(createDummyFile(project, text), ReviewInlineCommandMixin::class.java)!!
 
+    fun createHeading(project: Project, text: String): ReviewHeadingMixin =
+        PsiTreeUtil.findChildOfType(createDummyFile(project, text), ReviewHeadingMixin::class.java)!!
+
     fun createHeadingLabelId(project: Project, labelText: String) =
         PsiTreeUtil.findChildOfType(createDummyFile(project, "={$labelText}Dummy\n"), ReviewHeadingMixin::class.java)!!
             .let { it.nameIdentifier!! }

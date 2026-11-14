@@ -40,6 +40,11 @@
                                   implementationClass="com.nowsprinting.intellijreview.usages.ReviewFindUsagesProvider"/>
         <targetElementEvaluator language="ReVIEW"
                                 implementationClass="com.nowsprinting.intellijreview.usages.ReviewTargetElementEvaluator"/>
+        <lang.namesValidator language="ReVIEW"
+                             implementationClass="com.nowsprinting.intellijreview.rename.ReviewNamesValidator"/>
+        <renameInputValidator implementation="com.nowsprinting.intellijreview.rename.ReviewHeadingRenameInputValidator"/>
+        <renamePsiElementProcessor implementation="com.nowsprinting.intellijreview.rename.ReviewHeadingRenameProcessor"/>
+        <vetoRenameCondition implementation="com.nowsprinting.intellijreview.rename.ReviewVetoRenameCondition"/>
         <lang.refactoringSupport language="ReVIEW"
                                   implementationClass="com.nowsprinting.intellijreview.rename.ReviewRefactoringSupportProvider"/>
         <lang.psiStructureViewFactory language="ReVIEW"

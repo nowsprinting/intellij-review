@@ -34,14 +34,25 @@ abstract class ReviewHeadingMixin(node: ASTNode) : ASTWrapperPsiElement(node), P
     override fun getTextOffset(): Int = nameIdentifier?.textRange?.startOffset ?: super.getTextOffset()
 
     // @<hd>系はラベルが無ければ正規化キャプションで照合する(ReviewDeclarationCache参照)ため、
-    // Find Usagesの検索語もそれに揃える。リネームはgetNameIdentifier()==nullで拒否されたまま。
+    // Find Usagesの検索語・リネーム対象もそれに揃える。
     override fun getName(): String = getLabel() ?: ReviewDeclarationCache.normalizeCaption(this)
 
-    // ラベルの無い見出し(キャプションのみ)はリネームできない(計画書の要求どおり)。
-    // ElementManipulator経由ではなく葉トークンを直接差し替える(専用マニピュレータは持たない)。
+    // インライン命令を含むキャプションは正規化後の名前(内容のみ)と見出しの字面が一致せず、
+    // 書き換え方が一意に決まらないためリネーム対象外とする(ReviewVetoRenameCondition)。
+    fun hasPlainCaption(): Boolean =
+        node.findChildByType(ReviewTypes.TEXT) != null &&
+            node.getChildren(null).none { it.psi is ReviewInlineCommandMixin }
+
+    // ラベルはElementManipulator経由ではなく葉トークンを直接差し替える(専用マニピュレータは持たない)。
+    // キャプションは複数のTEXT葉に分かれ得る("@"単独など)ため、見出し行ごと作り直す。
     override fun setName(name: String): PsiElement {
-        val identifier = nameIdentifier ?: throw IncorrectOperationException("ラベルのない見出しはリネームできません")
-        identifier.replace(ReviewElementFactory.createHeadingLabelId(project, name))
-        return this
+        nameIdentifier?.let {
+            it.replace(ReviewElementFactory.createHeadingLabelId(project, name))
+            return this
+        }
+        if (!hasPlainCaption()) throw IncorrectOperationException("インライン命令を含むキャプションの見出しはリネームできません")
+        val firstText = node.findChildByType(ReviewTypes.TEXT)!!
+        val prefix = text.substring(0, firstText.startOffsetInParent) + firstText.text.takeWhile { it == ' ' || it == '\t' }
+        return replace(ReviewElementFactory.createHeading(project, "$prefix$name\n"))
     }
 }
