@@ -38,6 +38,8 @@
                                   implementationClass="com.nowsprinting.intellijreview.rename.ReviewInlineCommandManipulator"/>
         <lang.findUsagesProvider language="ReVIEW"
                                   implementationClass="com.nowsprinting.intellijreview.usages.ReviewFindUsagesProvider"/>
+        <lang.implementationTextSelectioner language="ReVIEW"
+                                            implementationClass="com.nowsprinting.intellijreview.reference.ReviewImplementationTextSelectioner"/>
         <targetElementEvaluator language="ReVIEW"
                                 implementationClass="com.nowsprinting.intellijreview.usages.ReviewTargetElementEvaluator"/>
         <lang.namesValidator language="ReVIEW"
