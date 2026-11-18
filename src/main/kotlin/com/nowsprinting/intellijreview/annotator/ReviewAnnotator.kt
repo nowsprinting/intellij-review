@@ -10,6 +10,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.nowsprinting.intellijreview.ReviewBundle
 import com.nowsprinting.intellijreview.completion.ReviewCommandCatalog
+import com.nowsprinting.intellijreview.declaration.ReviewBookLayout
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationCache
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
 import com.nowsprinting.intellijreview.psi.ReviewFile
@@ -54,10 +55,24 @@ class ReviewAnnotator : Annotator {
                 .range(nameLeaf.textRange).create()
         }
 
+        annotateMissingImage(block, holder)
+
         val body = block.node.findChildByType(ReviewTypes.BLOCK_BODY) ?: return
         if (body.findChildByType(ReviewTypes.BLOCK_END) != null) return
         holder.newAnnotation(HighlightSeverity.ERROR, ReviewBundle.message("annotator.unclosedBlock"))
             .range(nameLeaf.textRange).create()
+    }
+
+    // VirtualFileの探索はメモリ上のVFSを引くだけでディスクI/Oにならないため、ハイライトのたびに探してよい。
+    // ビルダー名はビルド対象が決まらないので、imagedir直下の全サブディレクトリをビルダー候補として扱う。
+    private fun annotateMissingImage(block: ReviewBlockCommandMixin, holder: AnnotationHolder) {
+        if (block.getCommandName() !in IMAGE_COMMANDS) return
+        val id = block.getIdArg()?.takeIf { it.isNotEmpty() } ?: return
+        val reFile = block.containingFile.virtualFile ?: return
+        val builders = ReviewBookLayout.imageDir(block.project, reFile)?.children.orEmpty().filter { it.isDirectory }.map { it.name }
+        if (ReviewBookLayout.findImage(block.project, reFile, id, builders, ReviewBookLayout.IMAGE_EXTENSIONS) != null) return
+        holder.newAnnotation(HighlightSeverity.ERROR, ReviewBundle.message("annotator.imageNotFound", id))
+            .range(block.nameIdentifier!!.textRange).create()
     }
 
     // 脚注の参照数やIDの重複はファイル全体の集計が要るため、要素ごとでなくファイル単位で1回だけ数える。
@@ -119,6 +134,8 @@ class ReviewAnnotator : Annotator {
             "list", "listnum", "emlist", "emlistnum", "cmd", "source", "box",
             "raw", "rawblock", "embed", "texequation", "graph", "comment",
         )
+
+        private val IMAGE_COMMANDS = setOf("image", "indepimage", "numberlessimage")
 
         private val HTML_ID_KINDS = setOf(ReviewDeclarationKind.LIST, ReviewDeclarationKind.IMAGE, ReviewDeclarationKind.TABLE)
 

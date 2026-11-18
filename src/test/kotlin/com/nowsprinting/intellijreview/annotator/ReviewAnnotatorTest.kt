@@ -77,10 +77,32 @@ class ReviewAnnotatorTest : BasePlatformTestCase() {
 
     fun testlistとimageでIDが重複すると警告になる() {
         val descr = "ID 'x' is shared by multiple list/image/table blocks (duplicate ids in EPUB)"
+        myFixture.addFileToProject("images/x.png", "")
         check(
             "//list[<warning descr=\"$descr\">x</warning>][cap]{\nfoo\n//}\n" +
                 "//image[<warning descr=\"$descr\">x</warning>][cap]\n"
         )
+    }
+
+    fun testimageのIDに対応する画像ファイルが無いとエラーになる() {
+        check("//image[<error descr=\"Image file not found: fig1\">fig1</error>][cap]\n")
+    }
+
+    fun testindepimageとnumberlessimageのIDに対応する画像ファイルが無いとエラーになる() {
+        check(
+            "//indepimage[<error descr=\"Image file not found: fig1\">fig1</error>][cap]\n" +
+                "//numberlessimage[<error descr=\"Image file not found: fig2\">fig2</error>][cap]\n"
+        )
+    }
+
+    fun testimageのIDに対応する画像ファイルがあればエラーにならない() {
+        myFixture.addFileToProject("images/a/fig1.svg", "")
+        myFixture.addFileToProject("images/html/a-fig2.png", "")
+        check("//image[fig1][cap]\n//image[fig2][cap]\n")
+    }
+
+    fun testimageのIDが空ならエラーにならない() {
+        check("//image[][cap]\n")
     }
 
     fun testimgtable単体ではID重複の警告にならない() {

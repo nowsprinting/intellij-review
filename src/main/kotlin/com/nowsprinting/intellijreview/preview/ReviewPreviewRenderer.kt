@@ -269,14 +269,9 @@ class ReviewPreviewRenderer(private val file: PsiFile, private val images: Revie
         return Figure(id, image?.image, ratio, min(height, settings.linesPerPage - 2.0), offset)
     }
 
-    // Re:VIEW本体(Book::ImageFinder)と同じ探索順。ビルダー名はPDF出力のlatex。
-    private fun findImage(id: String): VirtualFile? {
-        val reFile = file.virtualFile ?: return null
-        val imageDir = ReviewBookLayout.imageDir(project, reFile) ?: return null
-        val chapterId = reFile.nameWithoutExtension
-        return listOf("latex/$chapterId/$id", "latex/$chapterId-$id", "latex/$id", "$chapterId/$id", "$chapterId-$id", id)
-            .firstNotNullOfOrNull { path -> IMAGE_EXTENSIONS.firstNotNullOfOrNull { imageDir.findFileByRelativePath("$path.$it") } }
-    }
+    // ビルダー名はPDF出力のlatex。
+    private fun findImage(id: String): VirtualFile? =
+        file.virtualFile?.let { ReviewBookLayout.findImage(project, it, id, listOf("latex"), IMAGE_EXTENSIONS) }
 
     // ---- 文字列化 ----
 

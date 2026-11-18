@@ -33,6 +33,18 @@ object ReviewBookLayout {
     fun imageDir(project: Project, file: VirtualFile): VirtualFile? =
         baseDir(project, file)?.let { configuredDir(project, it, "imagedir", "images") }
 
+    // Re:VIEW本体のBook::Base#image_typesと同じ拡張子集合(全ビルダー分)。
+    val IMAGE_EXTENSIONS = listOf("ai", "psd", "eps", "pdf", "tif", "tiff", "png", "bmp", "jpg", "jpeg", "gif", "svg")
+
+    // Re:VIEW本体(Book::ImageFinder)と同じ探索順。builderごとに"<builder>/"配下を先に探す。
+    fun findImage(project: Project, reFile: VirtualFile, id: String, builders: List<String>, extensions: List<String>): VirtualFile? {
+        val imageDir = imageDir(project, reFile) ?: return null
+        val chapterId = reFile.nameWithoutExtension
+        val builderPaths = builders.flatMap { listOf("$it/$chapterId/$id", "$it/$chapterId-$id", "$it/$id") }
+        return (builderPaths + listOf("$chapterId/$id", "$chapterId-$id", id))
+            .firstNotNullOfOrNull { path -> extensions.firstNotNullOfOrNull { imageDir.findFileByRelativePath("$path.$it") } }
+    }
+
     // VfsUtilCore.loadTextでなくPSI経由で読むのは、エディタで編集中の未保存の設定も拾うため。
     fun configText(project: Project, baseDir: VirtualFile): String? =
         baseDir.findChild(CONFIG_YAML)?.let { PsiManager.getInstance(project).findFile(it)?.text }

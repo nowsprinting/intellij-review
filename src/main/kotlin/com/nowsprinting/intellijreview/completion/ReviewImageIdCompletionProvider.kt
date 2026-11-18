@@ -13,10 +13,6 @@ import com.nowsprinting.intellijreview.psi.impl.ReviewBlockCommandMixin
 object ReviewImageIdCompletionProvider : CompletionProvider<CompletionParameters>() {
     private val IMAGE_COMMANDS = setOf("image", "indepimage", "numberlessimage")
 
-    // Re:VIEW本体のBook::Base#image_typesと同じ拡張子集合。
-    // 拡張子で絞らないと.DS_Store等の非画像ファイルまで候補に出る。
-    private val IMAGE_EXTENSIONS = setOf("ai", "psd", "eps", "pdf", "tif", "tiff", "png", "bmp", "jpg", "jpeg", "gif", "svg")
-
     override fun addCompletions(
         parameters: CompletionParameters,
         context: ProcessingContext,
@@ -28,8 +24,9 @@ object ReviewImageIdCompletionProvider : CompletionProvider<CompletionParameters
 
         val reFile = parameters.originalFile.virtualFile ?: return
         val imageDir = ReviewBookLayout.imageDir(position.project, reFile)?.findChild(reFile.nameWithoutExtension) ?: return
+        // 拡張子で絞らないと.DS_Store等の非画像ファイルまで候補に出る。
         val ids = imageDir.children
-            .filter { !it.isDirectory && it.extension?.lowercase() in IMAGE_EXTENSIONS }
+            .filter { !it.isDirectory && it.extension?.lowercase() in ReviewBookLayout.IMAGE_EXTENSIONS }
             .map { it.nameWithoutExtension }
             .distinct()
 
