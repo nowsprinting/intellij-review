@@ -312,4 +312,12 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         val presentation = com.intellij.codeInsight.lookup.LookupElementPresentation.renderElement(sub)
         assertEquals("Sec Title", presentation.typeText)
     }
+
+    fun testhdで子見出しを持つ項もキャプションのみで補完される() {
+        myFixture.configureByText("a.re", "= A\n== Sec\n=== Sub\n==== Item\n@<hd>{<caret>}\n")
+        myFixture.completeBasic()
+        val strings = myFixture.lookupElementStrings!!
+        assertTrue(strings.containsAll(listOf("Sec", "Sub", "Item")))
+        assertFalse(strings.contains("Sec|Sub"))
+    }
 }

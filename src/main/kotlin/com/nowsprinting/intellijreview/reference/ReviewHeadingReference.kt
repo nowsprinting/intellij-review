@@ -49,12 +49,14 @@ class ReviewHeadingReference(
     }
 
     companion object {
-        // Re:VIEW本体のIndex#[]と同じく、完全一致がなければ"|"区切りのいずれかのセグメントが
-        // 一致する宣言を探し、複数あれば曖昧として解決しない。
+        // Re:VIEW本体のIndex#[]と同じく、完全一致がなければ末尾セグメントの重複だけを曖昧とみなし、
+        // 宣言順で最初にいずれかのセグメントが一致する宣言を返す。セグメント一致の件数で曖昧判定すると、
+        // 子見出しを持つ項("節|項|目"も"項"を含む)が常に曖昧になり解決できない。
         fun find(declarations: List<ReviewDeclaration>, file: PsiFile, itemId: String): ReviewDeclaration? {
             val inFile = declarations.filter { it.file == file }
             inFile.find { it.id == itemId }?.let { return it }
-            return inFile.filter { itemId in it.id.split('|') }.singleOrNull()
+            if (inFile.count { it.id.substringAfterLast('|') == itemId } > 1) return null
+            return inFile.find { itemId in it.id.split('|') }
         }
     }
 }
