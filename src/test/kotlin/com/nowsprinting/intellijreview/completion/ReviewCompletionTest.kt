@@ -19,6 +19,34 @@ class ReviewCompletionTest : BasePlatformTestCase() {
         myFixture.checkResult("//list[<caret>][]{\n//}\n")
     }
 
+    fun testキャプションが任意のブロック命令は括弧1個と本文が挿入される() {
+        myFixture.configureByText("a.re", "//<caret>\n")
+        myFixture.completeBasic()
+        myFixture.type("emlist\n")
+        myFixture.checkResult("//emlist[<caret>]{\n//}\n")
+    }
+
+    fun testcmdはformat_ja_mdの記法どおり括弧なしで本文だけが挿入される() {
+        myFixture.configureByText("a.re", "//<caret>\n")
+        myFixture.completeBasic()
+        myFixture.type("cmd\n")
+        myFixture.checkResult("//cmd{<caret>\n//}\n")
+    }
+
+    fun testindepimageは本文なしで識別子の括弧だけが挿入される() {
+        myFixture.configureByText("a.re", "//<caret>\n")
+        myFixture.completeBasic()
+        myFixture.type("indepimage\n")
+        myFixture.checkResult("//indepimage[<caret>]\n")
+    }
+
+    fun test引数を持たないブロック命令は本文だけが挿入される() {
+        myFixture.configureByText("a.re", "//<caret>\n")
+        myFixture.completeBasic()
+        myFixture.type("quote\n")
+        myFixture.checkResult("//quote{<caret>\n//}\n")
+    }
+
     fun testインライン名を補完できる() {
         myFixture.configureByText("a.re", "@<<caret>\n")
         myFixture.completeBasic()
@@ -45,7 +73,7 @@ class ReviewCompletionTest : BasePlatformTestCase() {
             myFixture.editor.document.text.substring(myFixture.caretOffset)
     }
 
-    fun testreview_ext_rbでdefblockされた命令は引数の数に応じた括弧と本文付きで補完される() {
+    fun testreview_ext_rbで任意引数のみのdefblock命令は括弧1個と本文付きで補完される() {
         assertEquals("//myblock[<caret>]{\n//}\n", completeBlockWithExt("myblock"))
     }
 

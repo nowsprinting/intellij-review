@@ -5,57 +5,52 @@ import com.intellij.psi.PsiFile
 import com.nowsprinting.intellijreview.declaration.ReviewBookLayout
 import com.nowsprinting.intellijreview.declaration.ReviewDeclarationKind
 
-// コマンド名はRe:VIEW本体(lib/review/compiler.rb の defblock/defsingle/definline 登録)を
-// deepwiki経由で調査し実名を採用した。一方、各ブロック命令の引数テンプレートは
-// (id+キャプションを取ることが既にStep 3で確定しているID_ARG_COMMANDSの10命令を除き)
-// compiler.rbの引数仕様を1つずつ検証してはいない、実装者の一般的なRe:VIEW知識に基づく
-// 近似値である(Open questionsに記載。将来の精査・修正を妨げないようdataとlogicを分離した)。
+// コマンド名はRe:VIEW本体(lib/review/compiler.rb と idgxmlbuilder.rb の
+// defblock/defsingle/defminicolumn 登録)に従う。引数テンプレートはdoc/format.ja.mdに載っている記法を基準に、
+// 必須引数の数だけ括弧を出し、引数がすべて任意の命令(emlistやnoteのキャプション)でも1個は出す。
+// compiler.rbの引数仕様を基準にしないのは、それは「パーサーが通す上限」であって書くべき形ではないため。
+// たとえばcmdはcompiler.rb上は0..1だがformat.ja.mdにキャプションの記法はなく、LaTeXでは
+// キャプション付きのcmdがビルドに失敗する。format.ja.mdに無い命令だけcompiler.rbの引数の数に従う。
 object ReviewCommandCatalog {
 
     private const val ID_CAPTION_BODY = "[][]{\n//}"
     private const val ID_BODY = "[]{\n//}"
     private const val ID_CONTENT_BRACKETS = "[][]"
     private const val RAW_BUILDER_CONTENT = "[|]"
-    private const val CAPTION_BODY = "[]{\n//}"
     private const val BODY_ONLY = "{\n//}"
     private const val ID_ONLY = "[]"
     private const val NO_ARGS = ""
 
     val BLOCK_COMMANDS: List<ReviewCommandSpec> = listOf(
-        // id+キャプション+本文(Step 3のID_ARG_COMMANDSと一致させた9命令)
-        "list", "listnum", "image", "indepimage", "numberlessimage", "graph", "table", "imgtable", "bibpaper",
+        // 必須引数2個+本文(list/listnum/imageはid+キャプション。graphはファイル名+コマンド名でキャプションは任意)
+        "list", "listnum", "image", "bibpaper", "graph",
+        // table/imgtableの引数は任意だが、format.ja.mdは"//table[識別子][キャプション]{"を基本形としている
+        "table", "imgtable",
     ).map { ReviewCommandSpec(it, ID_CAPTION_BODY) } + listOf(
-        // id+本文(複数行body)。texequationのみがこの形("//texequation[id]{\n...\n//}")。
-        "texequation",
+        // 必須引数1個、または任意引数のみ+本文
+        "doorquote", "emlist", "emlistnum", "source", "emtable", "box", "comment",
+        "note", "memo", "tip", "info", "warning", "important", "caution", "notice",
+        // 以下はidgxmlbuilder.rbで登録される命令
+        "insn", "link", "planning", "best", "security", "point", "shoot",
     ).map { ReviewCommandSpec(it, ID_BODY) } + listOf(
         // footnote/endnoteはdefsingle(1行完結)であり、本文braceを一切持たない。
         // 実際のRe:VIEW構文は"//footnote[id][content]"(引数括弧2つ、同一行)。
-        // 当初"//footnote[id]{content}"という誤った1行brace形式を想定し、
-        // レクサの都合で複数行bodyテンプレートに逃がしていたが、deepwikiで
-        // compiler.rbのdefsingle定義を確認し誤りと判明したため修正した。
         ReviewCommandSpec("footnote", ID_CONTENT_BRACKETS),
         ReviewCommandSpec("endnote", ID_CONTENT_BRACKETS),
         // rawもdefsingle。構文は"//raw[|builder|content]"(1個の括弧内を"|"で区切る)
         // という他に類のない形のため、専用テンプレートを用意した。
         ReviewCommandSpec("raw", RAW_BUILDER_CONTENT),
     ) + listOf(
-        // キャプション+本文
-        "emlist", "emlistnum", "cmd", "source", "quote", "emtable", "doorquote", "talk",
-        "note", "memo", "tip", "info", "warning", "important", "caution", "notice",
-        "planning", "best", "security", "point", "shoot",
-        "reference", "term", "practice", "expert",
-    ).map { ReviewCommandSpec(it, CAPTION_BODY) } + listOf(
-        // 本文のみ(引数無し)
-        "read", "lead", "address", "blockquote", "bpo", "flushright", "centering", "box",
-        "comment", "embed", "link", "rawblock", "insn",
+        // 引数無し+本文。cmd/texequation/embedはcompiler.rb上は任意引数を持つが、
+        // format.ja.mdの基本形は"//cmd{"・"//texequation{"・"//embed{"
+        "read", "lead", "cmd", "texequation", "embed", "quote", "talk",
+        "address", "blockquote", "bpo", "flushright", "centering",
+        "rawblock", "reference", "term", "practice", "expert",
     ).map { ReviewCommandSpec(it, BODY_ONLY) } + listOf(
-        ReviewCommandSpec("label", ID_ONLY),
-        ReviewCommandSpec("tsize", ID_ONLY),
-        ReviewCommandSpec("olnum", ID_ONLY),
-        ReviewCommandSpec("firstlinenum", ID_ONLY),
-        ReviewCommandSpec("include", ID_ONLY),
-        ReviewCommandSpec("dtp", ID_ONLY),
-    ) + listOf(
+        // 必須引数1個・本文無し。indepimage/numberlessimageはformat.ja.mdでは本文を持たず、キャプションは任意
+        "indepimage", "numberlessimage",
+        "label", "tsize", "olnum", "firstlinenum", "include", "dtp",
+    ).map { ReviewCommandSpec(it, ID_ONLY) } + listOf(
         // 引数無し・本文無し
         "printendnotes", "noindent", "blankline", "pagebreak", "hr", "parasep", "beginchild", "endchild",
     ).map { ReviewCommandSpec(it, NO_ARGS) }
@@ -87,9 +82,7 @@ object ReviewCommandCatalog {
     fun blockCommands(file: PsiFile): List<ReviewCommandSpec> =
         (BLOCK_COMMANDS + DEFBLOCK.findAll(reviewExtText(file)).map { userBlockSpec(it) }).distinctBy { it.name }
 
-    // 組み込みのテンプレートは命令ごとの手書きだが、ユーザー定義は引数の数しか分からないため機械的に組み立てる。
-    // 括弧の数は必須引数の数とし、省略可能な引数しか無い場合も1個は出す(組み込みのemlist(0..2)やnote(0..1)が
-    // キャプション用の括弧1個を持つのと揃えた)。
+    // 組み込みと同じく、括弧の数は必須引数の数とし、任意引数しか無い場合も1個は出す。
     private fun userBlockSpec(match: MatchResult): ReviewCommandSpec {
         val (method, name, minText, exclusive, maxText) = match.destructured
         val min = minText.toIntOrNull() ?: 0
